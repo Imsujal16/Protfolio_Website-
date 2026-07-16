@@ -4,17 +4,15 @@
  * Structure (left → center → right):
  *   [SJ]    [About · Skills · Projects · Experience · Contact]    [Resume ↗]
  *
- * Each desktop pill is wrapped in <GlowingBorderButton> which renders an
- * animated liquid-metal shader border via @paper-design/shaders. The inner
- * fill is a dark gradient (#202020 → #000), so all text is light-colored.
+ * Each desktop pill uses GlowingBorderButton — an animated liquid-metal
+ * shader border from @paper-design/shaders. The inner fill is dark
+ * (#202020 → #000), so all text is light-colored.
  *
- * pointer-events: none on the wrapper ensures clicks in the transparent gaps
- * between pills fall through to the hero canvas below.
+ * GlowingBorderButton renders a plain <div>. Positioning is handled via
+ * its style prop (passed as a spread), so the CSS module class is only
+ * used for the centered nav pill's absolute positioning.
  *
- * Mobile: logo pill (left) | hamburger pill (center) | resume pill (right)
- *         + fixed mobile panel below.
- *         The hamburger pill stays as CSS glass (no shader) to avoid
- *         unnecessary WebGL cost on mobile.
+ * Mobile: hamburger pill (center) — CSS glass only, no shader.
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
@@ -30,7 +28,7 @@ const NAV_LINKS = [
   { label: 'Contact',    href: '#contact'     },
 ];
 
-/* Thin-stroke northeast arrow — Lucide aesthetic */
+/* Thin-stroke northeast arrow */
 function ArrowUpRight() {
   return (
     <svg
@@ -71,7 +69,6 @@ export default function Navbar() {
   const scrolled        = useScrolled(20);
   const triggerRef      = useRef(null);
 
-  /* Escape key closes mobile panel */
   useEffect(() => {
     const onKey = (e) => {
       if (e.key === 'Escape' && open) {
@@ -83,7 +80,6 @@ export default function Navbar() {
     return () => document.removeEventListener('keydown', onKey);
   }, [open]);
 
-  /* Lock body scroll when mobile panel is open */
   useEffect(() => {
     document.body.style.overflow = open ? 'hidden' : '';
     return () => { document.body.style.overflow = ''; };
@@ -98,24 +94,17 @@ export default function Navbar() {
 
   return (
     <>
-      {/* ── Transparent wrapper — no background, no border, no blur ── */}
       <header className={wrapperClass} role="banner">
 
-        {/* ① Logo pill — liquid-metal border, 44×44 circle
-              Inner fill is dark (#202020→#000), so "SJ" is white.
-              borderRadius: "100px" on a 44×44 box = perfect circle. */}
+        {/* ① LOGO PILL — 44×44 circle, far left in flex row */}
         <GlowingBorderButton
           width={44}
           height={44}
           borderRadius="100px"
-          /* Override inner fill to be slightly lighter so SJ monogram reads */
-          innerFrom="#2a2a2a"
+          innerFrom="#252525"
           innerTo="#111111"
           innerMargin={2}
-          /* Outer div gets the CSS module's positioning */
-          className={styles.logoPill}
-          /* Remove old CSS glass — GlowingBorderButton provides the border */
-          style={{ position: 'absolute', left: 0 }}
+          style={{ flexShrink: 0 }}
         >
           <a
             href="/"
@@ -127,49 +116,43 @@ export default function Navbar() {
               width:          '100%',
               height:         '100%',
               textDecoration: 'none',
-              color:          'rgba(230,230,230,0.90)',
+              color:          'rgba(225, 225, 225, 0.92)',
               fontSize:       '13px',
               fontWeight:     300,
               letterSpacing:  '0.04em',
               lineHeight:     1,
               userSelect:     'none',
-              borderRadius:   'inherit',
             }}
           >
             SJ
           </a>
         </GlowingBorderButton>
 
-        {/* ② Nav links pill — liquid-metal border, auto-width
-              width="auto" → GlowingBorderButton uses inline-flex + ResizeObserver.
-              Absolutely centered via CSS class.
-              Each <a> link remains a real anchor — click/scroll behavior preserved.
-              Text is light (rgba(200,200,200,0.85)) to show against dark fill. */}
+        {/* ② NAV LINKS PILL — auto-width, absolutely centered */}
+        {/*   position:absolute + left:50% lives on the outer GlowingBorderButton div */}
+        {/*   via the style prop so it correctly overrides the component's default    */}
         <GlowingBorderButton
           width="auto"
           height={44}
           borderRadius="100px"
           innerMargin={2}
-          className={styles.linksPillShader}
-          contentStyle={{
-            gap:    '2px',
-            padding: '0 10px',
+          style={{
+            position:  'absolute',
+            left:      '50%',
+            transform: 'translateX(-50%)',
           }}
+          contentStyle={{ padding: '0 10px', gap: '2px' }}
         >
           <nav aria-label="Site sections" style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
             {NAV_LINKS.map(({ label, href }) => (
-              <a
-                key={label}
-                href={href}
-                className={styles.navLinkShader}
-              >
+              <a key={label} href={href} className={styles.navLinkShader}>
                 {label}
               </a>
             ))}
           </nav>
         </GlowingBorderButton>
 
-        {/* ② Hamburger pill — mobile only, stays CSS glass (no shader) */}
+        {/* ② HAMBURGER PILL — mobile only, CSS glass */}
         <button
           ref={triggerRef}
           className={`${styles.hamburgerPill} ${open ? styles.hamburgerOpen : ''}`}
@@ -183,15 +166,16 @@ export default function Navbar() {
           <MenuIcon open={open} />
         </button>
 
-        {/* ③ Resume pill — liquid-metal border, fixed width
-              Stays as an <a> link wrapping the content so href/target work.
-              Arrow icon preserved. Text light for dark-fill contrast. */}
+        {/* ③ RESUME PILL — fixed 130×44, far right in flex row */}
         <GlowingBorderButton
           width={130}
           height={44}
           borderRadius="100px"
           innerMargin={2}
-          className={styles.resumePillShader}
+          style={{
+            flexShrink: 0,
+            transition: 'transform 0.26s cubic-bezier(0.34,1.56,0.64,1)',
+          }}
         >
           <a
             href="/resume.pdf"
@@ -206,12 +190,11 @@ export default function Navbar() {
               width:          '100%',
               height:         '100%',
               textDecoration: 'none',
-              color:          'rgba(210, 210, 210, 0.90)',
+              color:          'rgba(215, 215, 215, 0.92)',
               fontSize:       '13.5px',
               fontWeight:     500,
               letterSpacing:  '-0.01em',
               whiteSpace:     'nowrap',
-              borderRadius:   'inherit',
             }}
           >
             <span>Resume</span>
@@ -221,7 +204,7 @@ export default function Navbar() {
 
       </header>
 
-      {/* ── Mobile panel — fixed, independent of the wrapper ── */}
+      {/* ── Mobile panel ── */}
       <div
         id="mobile-nav-panel"
         className={`${styles.mobilePanel} ${open ? styles.mobilePanelOpen : ''}`}

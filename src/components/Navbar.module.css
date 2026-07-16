@@ -72,20 +72,8 @@
 }
 
 
-/* ── LOGO PILL — Shader version ──────────────────────────── */
-/*
- * GlowingBorderButton provides the visual border + fill.
- * This class only handles flex positioning.
- */
-.logoPill {
-  flex-shrink: 0;
-  pointer-events: auto;
-  display: flex;
-  align-items: center;
-  transition: opacity 0.18s ease;
-}
-
-.logoPill:hover { opacity: 0.82; }
+/* ── LOGO PILL — no CSS needed (GlowingBorderButton style prop handles it) */
+/* Hover opacity handled inline via React if needed */
 
 
 /* ── NAV LINKS PILL — Shader version ─────────────────────── */
@@ -186,27 +174,7 @@
 .barBot { transform: translateY(-6px) rotate(-45deg);}
 
 
-/* ── RESUME PILL — Shader version ────────────────────────── */
-/*
- * GlowingBorderButton at width=130 height=44.
- * CSS only: flex-shrink, pointer-events, hover lift.
- */
-.resumePillShader {
-  flex-shrink: 0;
-  pointer-events: auto;
-  display: flex;
-  align-items: center;
-  transition: transform 0.26s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-.resumePillShader:hover {
-  transform: translateY(-1.5px);
-}
-
-.resumePillShader:active {
-  transform: translateY(0) scale(0.98);
-  transition-duration: 0.08s;
-}
+/* ── RESUME PILL — no CSS needed (GlowingBorderButton style prop handles it) */
 
 
 /* ── MOBILE PANEL ────────────────────────────────────────── */

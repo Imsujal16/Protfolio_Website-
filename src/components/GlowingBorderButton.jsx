@@ -1,24 +1,23 @@
 /**
  * GlowingBorderButton.jsx
  *
- * Liquid-metal shader border effect using @paper-design/shaders.
+ * Liquid-metal animated shader border using @paper-design/shaders.
  *
- * Supports two sizing modes:
- *   Fixed:  pass numeric width + height → outer wrapper is exactly that size
- *   Auto:   pass width="auto" (default) → wrapper is display:inline-flex,
- *           grows to fit children; ResizeObserver keeps canvas in sync.
+ * Two sizing modes:
+ *   Fixed:  width={44} height={44}  → exact pixel size
+ *   Auto:   width="auto"            → wrapper uses display:inline-flex,
+ *                                     grows to fit children naturally
  *
- * The dark inner fill (#202020 → #000) is intentional — content text should
- * be light. Pass textColor prop to override (default: rgba(200,200,200,0.85)).
+ * The inner fill is a dark gradient (#202020 → #000) so text
+ * should be light-colored (handled by the consumer).
  *
- * Usage:
- *   <GlowingBorderButton width={44} height={44}>SJ</GlowingBorderButton>
- *   <GlowingBorderButton width="auto" height={44}>…links…</GlowingBorderButton>
+ * All extra props (className, style, onClick, aria-*, etc.)
+ * are forwarded to the outer wrapper div.
  */
 
 import { useRef, useEffect, useLayoutEffect, useCallback } from 'react';
 
-/* Inject canvas sizing styles once into <head> */
+/* Inject canvas sizing rules once globally */
 function ensureGlobalStyle() {
   if (document.getElementById('gbb-shader-style')) return;
   const style = document.createElement('style');
@@ -36,20 +35,14 @@ function ensureGlobalStyle() {
   document.head.appendChild(style);
 }
 
-/* ── Component ──────────────────────────────────────────────── */
-
 export function GlowingBorderButton({
   children,
-  /* Sizing: fixed numeric px OR "auto" to size-to-content */
   width = 'auto',
   height = 44,
-  /* Visual tweaks */
   borderRadius = '100px',
   innerMargin = 2,
-  /* Inner-fill gradient — dark by default for contrast with liquid-metal */
   innerFrom = '#202020',
   innerTo   = '#000000',
-  /* Shader params — matches the reference implementation */
   shaderParams = {
     u_repetition: 4,
     u_softness:   0.5,
@@ -64,28 +57,27 @@ export function GlowingBorderButton({
     u_offsetY:    -0.1,
   },
   speed = 0.6,
-  /* Pass-through to the inner content wrapper */
   contentStyle,
   contentClassName,
-  children: _children,
+  className,
+  style: styleProp,
   ...rest
 }) {
-  const outerRef  = useRef(null);  /* the outermost sizing div */
-  const shaderRef = useRef(null);  /* the shader mount target div */
-  const mountRef  = useRef(null);  /* ShaderMount instance */
+  const outerRef  = useRef(null);
+  const shaderRef = useRef(null);
+  const mountRef  = useRef(null);
 
   const isAutoWidth = width === 'auto';
 
-  /* ── Boot shader ─────────────────────────────────────────── */
+  /* ── Boot shader (async import keeps initial bundle lean) ─── */
   const initShader = useCallback(async () => {
     if (!shaderRef.current) return;
-    /* Destroy previous instance if re-initialising */
     if (mountRef.current?.destroy) {
       mountRef.current.destroy();
       mountRef.current = null;
     }
     const { liquidMetalFragmentShader, ShaderMount } = await import('@paper-design/shaders');
-    if (!shaderRef.current) return; /* guard against unmount during async */
+    if (!shaderRef.current) return;
     mountRef.current = new ShaderMount(
       shaderRef.current,
       liquidMetalFragmentShader,
@@ -93,9 +85,8 @@ export function GlowingBorderButton({
       undefined,
       speed,
     );
-  }, []); /* stable — shaderParams are initialisation-time only */
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  /* ── Mount / unmount ─────────────────────────────────────── */
   useEffect(() => {
     ensureGlobalStyle();
     initShader();
@@ -105,39 +96,41 @@ export function GlowingBorderButton({
     };
   }, [initShader]);
 
-  /* ── Auto-width: sync canvas size on every resize ────────── */
+  /* ── Auto-width: nudge ShaderMount on resize ─────────────── */
   useLayoutEffect(() => {
     if (!isAutoWidth) return;
     const outer = outerRef.current;
     if (!outer) return;
     const ro = new ResizeObserver(() => {
-      /* ShaderMount reads the div's clientWidth/clientHeight automatically,
-         but we may need to trigger a resize event if it doesn't auto-update. */
       mountRef.current?.setSize?.(outer.clientWidth, outer.clientHeight);
     });
     ro.observe(outer);
     return () => ro.disconnect();
   }, [isAutoWidth]);
 
-  /* ── Outer sizing styles ─────────────────────────────────── */
-  const outerStyle = isAutoWidth
-    ? {
-        display:      'inline-flex',
-        position:     'relative',
-        overflow:     'hidden',
-        height:       typeof height === 'number' ? `${height}px` : height,
-        borderRadius,
-      }
-    : {
-        display:      'block',
-        position:     'relative',
-        overflow:     'hidden',
-        width:        typeof width  === 'number' ? `${width}px`  : width,
-        height:       typeof height === 'number' ? `${height}px` : height,
-        borderRadius,
-      };
+  /* ── Outer wrapper style ─────────────────────────────────── */
+  const outerStyle = {
+    position:    'relative',
+    overflow:    'hidden',
+    borderRadius,
+    /* sizing */
+    ...(isAutoWidth
+      ? {
+          display: 'inline-flex',
+          alignItems: 'center',
+          height: typeof height === 'number' ? `${height}px` : height,
+        }
+      : {
+          display: 'block',
+          width:   typeof width  === 'number' ? `${width}px`  : width,
+          height:  typeof height === 'number' ? `${height}px` : height,
+        }
+    ),
+    /* caller overrides last so they win over the defaults above */
+    ...styleProp,
+  };
 
-  /* ── Inner fill styles ───────────────────────────────────── */
+  /* ── Inner dark fill (2px inset reveals the shader border) ── */
   const innerStyle = {
     position:       'absolute',
     inset:          `${innerMargin}px`,
@@ -147,14 +140,13 @@ export function GlowingBorderButton({
     justifyContent: 'center',
     borderRadius,
     background:     `linear-gradient(to bottom, ${innerFrom}, ${innerTo})`,
-    /* Pointer events must stay on for links/buttons inside */
     pointerEvents:  'auto',
     ...contentStyle,
   };
 
   return (
-    <div ref={outerRef} style={outerStyle} {...rest}>
-      {/* Shader layer — z:0, behind inner fill */}
+    <div ref={outerRef} className={className} style={outerStyle} {...rest}>
+      {/* Animated shader border layer */}
       <div
         ref={shaderRef}
         className="gbb-shader-container"
@@ -167,7 +159,7 @@ export function GlowingBorderButton({
         }}
       />
 
-      {/* Dark inner fill — clips 2px inward to reveal shader border */}
+      {/* Dark inner fill */}
       <div style={innerStyle} className={contentClassName}>
         {children}
       </div>
