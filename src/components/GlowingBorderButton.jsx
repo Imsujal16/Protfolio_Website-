@@ -44,7 +44,7 @@ export function GlowingBorderButton({
   borderRadius = '100px',
   innerMargin = 2,
   /* Inner styles (frosted glass) */
-  innerBackground = 'rgba(20, 20, 20, 0.15)',
+  innerBackground = 'rgba(255, 255, 255, 0.04)',
   shaderParams = {
     u_repetition: 4,
     u_softness:   0.5,
@@ -204,8 +204,8 @@ export function GlowingBorderButton({
           zIndex:        1,
           borderRadius:  `calc(${borderRadius} - ${m})`,
           background:    innerBackground,
-          backdropFilter: 'blur(10px) saturate(180%)',
-          WebkitBackdropFilter: 'blur(10px) saturate(180%)',
+          backdropFilter: 'blur(20px) saturate(180%)',
+          WebkitBackdropFilter: 'blur(20px) saturate(180%)',
           pointerEvents: 'none',
         }}
       />
