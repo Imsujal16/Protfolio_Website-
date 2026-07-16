@@ -14,6 +14,9 @@ html {
   -moz-osx-font-smoothing: grayscale;
   /* Scroll is enabled on html/body so the navbar scroll listener fires */
   overflow-x: hidden;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
 }
 
 body {
@@ -24,11 +27,17 @@ body {
     -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   /* min-height lets future sections sit below the hero */
   min-height: 100vh;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
 }
 
 #root {
   min-height: 100vh;
   position: relative;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
 }
 
 /* Global focus-visible: consistent across all browsers */
