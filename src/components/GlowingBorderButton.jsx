@@ -70,13 +70,19 @@ export function GlowingBorderButton({
   const mountRef  = useRef(null);
 
   const initShader = useCallback(async () => {
-    if (!shaderRef.current) return;
-    if (mountRef.current?.destroy) {
-      mountRef.current.destroy();
+    const outer = outerRef.current;
+    if (!shaderRef.current || !outer) return;
+
+    if (mountRef.current?.dispose) {
+      mountRef.current.dispose();
       mountRef.current = null;
     }
+
     const { liquidMetalFragmentShader, ShaderMount } = await import('@paper-design/shaders');
-    if (!shaderRef.current) return;
+    if (!shaderRef.current || !outer) return;
+
+    console.log(`[ShaderMount] Initializing on wrapper size: ${outer.clientWidth}x${outer.clientHeight}`);
+
     mountRef.current = new ShaderMount(
       shaderRef.current,
       liquidMetalFragmentShader,
@@ -84,45 +90,62 @@ export function GlowingBorderButton({
       undefined,
       speed,
     );
+
+    // Explicitly set the canvas drawing buffer to match the wrapper's real size * devicePixelRatio
+    // This fixes the bug where CSS width:100% stretches a too-small canvas buffer.
+    const canvas = shaderRef.current.querySelector('canvas');
+    if (canvas) {
+      console.log(`[ShaderMount] Canvas size right after init: ${canvas.width}x${canvas.height}`);
+      
+      const dpr = window.devicePixelRatio || 1;
+      const expectedWidth = outer.clientWidth * dpr;
+      const expectedHeight = outer.clientHeight * dpr;
+      
+      if (canvas.width !== expectedWidth || canvas.height !== expectedHeight) {
+        canvas.width = expectedWidth;
+        canvas.height = expectedHeight;
+        console.log(`[ShaderMount] Canvas size corrected to: ${canvas.width}x${canvas.height}`);
+      }
+    }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     ensureGlobalStyle();
-    initShader();
     return () => {
-      if (mountRef.current?.destroy) mountRef.current.destroy();
+      if (mountRef.current?.dispose) mountRef.current.dispose();
       mountRef.current = null;
     };
-  }, [initShader]);
+  }, []);
 
   /* ── ResizeObserver to fix Bug 1 (Shader Canvas Resizing) ── */
   useLayoutEffect(() => {
     const outer = outerRef.current;
     if (!outer) return;
     
+    let lastWidth = 0;
+    let lastHeight = 0;
+
     const ro = new ResizeObserver(() => {
-      if (!mountRef.current || !shaderRef.current) return;
+      const currentWidth = outer.clientWidth;
+      const currentHeight = outer.clientHeight;
       
-      const rectWidth = outer.clientWidth;
-      const rectHeight = outer.clientHeight;
-      
-      // Try calling setSize if the API provides it
-      if (typeof mountRef.current.setSize === 'function') {
-        mountRef.current.setSize(rectWidth, rectHeight);
-      } else {
-        // Fallback: manually update the canvas drawing buffer resolution
-        const canvas = shaderRef.current.querySelector('canvas');
-        if (canvas) {
-          const dpr = window.devicePixelRatio || 1;
-          canvas.width = rectWidth * dpr;
-          canvas.height = rectHeight * dpr;
-        }
+      // Only re-init if the dimensions actually changed
+      if (currentWidth !== lastWidth || currentHeight !== lastHeight) {
+        lastWidth = currentWidth;
+        lastHeight = currentHeight;
+        
+        console.log(`[ResizeObserver] Wrapper measured at ${currentWidth}x${currentHeight}. Re-initializing shader...`);
+        // We call initShader on resize, which disposes the old one and makes a new one with correct size
+        initShader();
       }
     });
     
+    // ro.observe triggers immediately upon observation, handling the initial mount
+    // AFTER the layout measurement is complete.
     ro.observe(outer);
+    
     return () => ro.disconnect();
-  }, []);
+  }, [initShader]);
 
   const isAutoWidth = width === 'auto';
   const m = `${innerMargin}px`;
