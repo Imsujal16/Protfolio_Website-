@@ -1,22 +1,25 @@
 /**
- * Navbar.jsx — Three independent floating glass pills.
+ * Navbar.jsx — Three independent floating liquid-metal pills.
  *
  * Structure (left → center → right):
  *   [SJ]    [About · Skills · Projects · Experience · Contact]    [Resume ↗]
  *
- * Each element is a completely separate DOM node with its own
- * backdrop-filter surface. The wrapper is 100% transparent —
- * only the pills themselves have glass styling.
+ * Each desktop pill is wrapped in <GlowingBorderButton> which renders an
+ * animated liquid-metal shader border via @paper-design/shaders. The inner
+ * fill is a dark gradient (#202020 → #000), so all text is light-colored.
  *
- * pointer-events: none on the wrapper ensures clicks in the
- * transparent gaps between pills pass through to the hero below.
+ * pointer-events: none on the wrapper ensures clicks in the transparent gaps
+ * between pills fall through to the hero canvas below.
  *
  * Mobile: logo pill (left) | hamburger pill (center) | resume pill (right)
- *         + fixed mobile panel drops below
+ *         + fixed mobile panel below.
+ *         The hamburger pill stays as CSS glass (no shader) to avoid
+ *         unnecessary WebGL cost on mobile.
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useScrolled } from '../hooks/useScrolled';
+import { GlowingBorderButton } from './GlowingBorderButton';
 import styles from './Navbar.module.css';
 
 const NAV_LINKS = [
@@ -37,7 +40,7 @@ function ArrowUpRight() {
       fill="none"
       aria-hidden="true"
       focusable="false"
-      className={styles.ctaArrow}
+      style={{ flexShrink: 0, transition: 'transform 0.24s cubic-bezier(0.16,1,0.3,1)' }}
     >
       <path
         d="M2 9L9 2M9 2H3.5M9 2V7.5"
@@ -64,9 +67,8 @@ function MenuIcon({ open }) {
 /* ─────────────────────────────────────────────────────────── */
 
 export default function Navbar() {
-  const [open, setOpen]         = useState(false);
-  const [isHovering, setIsHovering] = useState(false);
-  const scrolled                = useScrolled(20);
+  const [open, setOpen] = useState(false);
+  const scrolled        = useScrolled(20);
   const triggerRef      = useRef(null);
 
   /* Escape key closes mobile panel */
@@ -94,56 +96,80 @@ export default function Navbar() {
     scrolled ? styles.scrolled : '',
   ].filter(Boolean).join(' ');
 
-  /* ── Inline style object for the links pill ──────────────────
-   * Inline styles always win over module CSS — this guarantees
-   * the background/blur values are actually applied in the DOM,
-   * bypassing any CSS specificity issues.
-   * Default:  rgba(255,255,255,0.12) / blur(12px)
-   * Hovering: rgba(255,255,255,0.22) / blur(24px)
-   * ─────────────────────────────────────────────────────────── */
-  const linksPillStyle = {
-    background:          isHovering
-                           ? 'rgba(255, 255, 255, 0.22)'
-                           : 'rgba(255, 255, 255, 0.12)',
-    backdropFilter:      isHovering
-                           ? 'blur(24px) saturate(200%)'
-                           : 'blur(12px) saturate(160%)',
-    WebkitBackdropFilter: isHovering
-                           ? 'blur(24px) saturate(200%)'
-                           : 'blur(12px) saturate(160%)',
-    transition: 'background 0.3s ease, backdrop-filter 0.3s ease, -webkit-backdrop-filter 0.3s ease',
-  };
-
   return (
     <>
       {/* ── Transparent wrapper — no background, no border, no blur ── */}
       <header className={wrapperClass} role="banner">
 
-        {/* ① Logo pill — far left, independent glass surface */}
-        <a href="/" className={styles.logoPill} aria-label="SJ — home">
-          {/* Refraction line sits at top of each pill */}
-          <span className={styles.shine} aria-hidden="true" />
-          <span className={styles.sjText}>SJ</span>
-        </a>
-
-        {/* ② Nav links pill — absolutely centered, desktop only */}
-        {/* onMouseEnter/Leave toggle isHovering → pillStyle applied via inline style */}
-        <nav
-          className={styles.linksPill}
-          aria-label="Site sections"
-          onMouseEnter={() => setIsHovering(true)}
-          onMouseLeave={() => setIsHovering(false)}
-          style={linksPillStyle}
+        {/* ① Logo pill — liquid-metal border, 44×44 circle
+              Inner fill is dark (#202020→#000), so "SJ" is white.
+              borderRadius: "100px" on a 44×44 box = perfect circle. */}
+        <GlowingBorderButton
+          width={44}
+          height={44}
+          borderRadius="100px"
+          /* Override inner fill to be slightly lighter so SJ monogram reads */
+          innerFrom="#2a2a2a"
+          innerTo="#111111"
+          innerMargin={2}
+          /* Outer div gets the CSS module's positioning */
+          className={styles.logoPill}
+          /* Remove old CSS glass — GlowingBorderButton provides the border */
+          style={{ position: 'absolute', left: 0 }}
         >
-          <span className={styles.shine} aria-hidden="true" />
-          {NAV_LINKS.map(({ label, href }) => (
-            <a key={label} href={href} className={styles.navLink}>
-              {label}
-            </a>
-          ))}
-        </nav>
+          <a
+            href="/"
+            aria-label="SJ — home"
+            style={{
+              display:        'flex',
+              alignItems:     'center',
+              justifyContent: 'center',
+              width:          '100%',
+              height:         '100%',
+              textDecoration: 'none',
+              color:          'rgba(230,230,230,0.90)',
+              fontSize:       '13px',
+              fontWeight:     300,
+              letterSpacing:  '0.04em',
+              lineHeight:     1,
+              userSelect:     'none',
+              borderRadius:   'inherit',
+            }}
+          >
+            SJ
+          </a>
+        </GlowingBorderButton>
 
-        {/* ② Hamburger pill — absolutely centered, mobile only */}
+        {/* ② Nav links pill — liquid-metal border, auto-width
+              width="auto" → GlowingBorderButton uses inline-flex + ResizeObserver.
+              Absolutely centered via CSS class.
+              Each <a> link remains a real anchor — click/scroll behavior preserved.
+              Text is light (rgba(200,200,200,0.85)) to show against dark fill. */}
+        <GlowingBorderButton
+          width="auto"
+          height={44}
+          borderRadius="100px"
+          innerMargin={2}
+          className={styles.linksPillShader}
+          contentStyle={{
+            gap:    '2px',
+            padding: '0 10px',
+          }}
+        >
+          <nav aria-label="Site sections" style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+            {NAV_LINKS.map(({ label, href }) => (
+              <a
+                key={label}
+                href={href}
+                className={styles.navLinkShader}
+              >
+                {label}
+              </a>
+            ))}
+          </nav>
+        </GlowingBorderButton>
+
+        {/* ② Hamburger pill — mobile only, stays CSS glass (no shader) */}
         <button
           ref={triggerRef}
           className={`${styles.hamburgerPill} ${open ? styles.hamburgerOpen : ''}`}
@@ -157,27 +183,45 @@ export default function Navbar() {
           <MenuIcon open={open} />
         </button>
 
-        {/* ③ Resume pill — far right, independent glass surface */}
-        <a
-          href="/resume.pdf"
-          target="_blank"
-          rel="noopener noreferrer"
-          className={styles.resumePill}
-          aria-label="View resume (opens in new tab)"
+        {/* ③ Resume pill — liquid-metal border, fixed width
+              Stays as an <a> link wrapping the content so href/target work.
+              Arrow icon preserved. Text light for dark-fill contrast. */}
+        <GlowingBorderButton
+          width={130}
+          height={44}
+          borderRadius="100px"
+          innerMargin={2}
+          className={styles.resumePillShader}
         >
-          <span className={styles.shine} aria-hidden="true" />
-          <span>Resume</span>
-          <ArrowUpRight />
-        </a>
+          <a
+            href="/resume.pdf"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="View resume (opens in new tab)"
+            style={{
+              display:        'flex',
+              alignItems:     'center',
+              justifyContent: 'center',
+              gap:            '5px',
+              width:          '100%',
+              height:         '100%',
+              textDecoration: 'none',
+              color:          'rgba(210, 210, 210, 0.90)',
+              fontSize:       '13.5px',
+              fontWeight:     500,
+              letterSpacing:  '-0.01em',
+              whiteSpace:     'nowrap',
+              borderRadius:   'inherit',
+            }}
+          >
+            <span>Resume</span>
+            <ArrowUpRight />
+          </a>
+        </GlowingBorderButton>
 
       </header>
 
       {/* ── Mobile panel — fixed, independent of the wrapper ── */}
-      {/*
-        * Positioned with fixed coords so it sits just below the pills.
-        * Independent from the navbar wrapper so it can't affect
-        * the transparent gaps between pills.
-        */}
       <div
         id="mobile-nav-panel"
         className={`${styles.mobilePanel} ${open ? styles.mobilePanelOpen : ''}`}

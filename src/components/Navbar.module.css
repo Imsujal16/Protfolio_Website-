@@ -1,56 +1,32 @@
 /* ============================================================
-   Navbar.module.css — Three separate floating glass pills.
-
-   THE CORE ARCHITECTURAL CHANGE from the previous version:
-   Previously: one .inner div = one connected glass bar.
-   Now: three independent elements, each with its own
-        backdrop-filter surface. The wrapper has NO background.
+   Navbar.module.css
 
    Layout:
-     .navbar       — transparent fixed wrapper, pointer-events: none
-     .logoPill     — glass surface, far left
-     .linksPill    — glass surface, absolute center, desktop only
-     .hamburgerPill— glass surface, absolute center, mobile only
-     .resumePill   — glass surface, far right
-     .mobilePanel  — glass surface, separate fixed element below
+     .navbar           — transparent fixed wrapper, pointer-events: none
+     .logoPill         — shader pill, far left (GlowingBorderButton)
+     .linksPillShader  — shader pill, absolute center, desktop only
+     .hamburgerPill    — CSS glass pill, absolute center, mobile only
+     .resumePillShader — shader pill, far right (GlowingBorderButton)
+     .mobilePanel      — CSS glass, separate fixed element below
 
-   Glass recipe (each pill):
-     background: rgba(255,255,255,0.07)
-     backdrop-filter: blur(20px) saturate(180%)
-     border: 1px solid rgba(255,255,255,0.12)
-     box-shadow: soft drop + inner glow
+   The three desktop pills (logo, nav links, resume) are wrapped in
+   GlowingBorderButton which renders a liquid-metal animated shader border.
+   Their CSS classes provide ONLY layout/positioning — no background or
+   backdrop-filter (the shader canvas provides those).
 
-   Why rgba(255,255,255,0.07) not rgba(0,0,0,0.18)?
-     The site background is white. A white-tinted glass over white
-     creates a pure frosted effect. Page content (portrait image)
-     bleeds through the blur beautifully. Text is dark for contrast.
+   The hamburger pill (mobile only) keeps the old CSS glass treatment
+   since GlowingBorderButton is not used there.
    ============================================================ */
 
 
-/* ── PILL GLASS RECIPE ───────────────────────────────────────
-   Shared glass styles. Each pill composes from this base.
-   Isolated to ONE class — composing here, not duplicating.
+/* ── PILL GLASS RECIPE (hamburger only) ─────────────────────
+   Shared glass base — now only consumed by .hamburgerPill.
    ─────────────────────────────────────────────────────────── */
 .pill {
-  /*
-   * Glass transparency:
-   * Very light white tint — rgba(255,255,255,0.07).
-   * This lets the background show through clearly.
-   * Over the white background: nearly invisible frost.
-   * Over the portrait: soft bright veil that blurs the image.
-   * The border + refraction line do the visual work of making
-   * it "feel" like glass even at this low opacity.
-   */
   background: rgba(255, 255, 255, 0.07);
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
 
-  /*
-   * Three border layers:
-   *   outer:      1px rgba(white, 0.12) — the glass slab edge
-   *   inner-glow: 0.5px rgba(white, 0.08) inset — secondary inner surface
-   *   drop:       soft shadow, low opacity — pill floating in space
-   */
   border: 1px solid rgba(255, 255, 255, 0.15);
   box-shadow:
     0 0 0 0.5px rgba(255, 255, 255, 0.10) inset,
@@ -59,31 +35,10 @@
 
   position: relative;
   overflow: hidden;
-
-  /* Re-enable pointer events (wrapper is pointer-events:none) */
   pointer-events: auto;
 }
 
-/* Slightly deepen on scroll — still transparent */
-.scrolled .pill {
-  background: rgba(255, 255, 255, 0.11);
-  backdrop-filter: blur(24px) saturate(190%);
-  -webkit-backdrop-filter: blur(24px) saturate(190%);
-  box-shadow:
-    0 0 0 0.5px rgba(255, 255, 255, 0.10) inset,
-    0 6px 36px rgba(0, 0, 0, 0.14),
-    0 1px 6px rgba(0, 0, 0, 0.08);
-}
-
 /* ── Top-edge refraction shine ───────────────────────────── */
-/*
- * The single detail that makes blur look like actual glass.
- * Real glass catches bright light at its top edge — a thin,
- * center-bright horizontal highlight that fades to transparent
- * at both sides. One gradient line. That's it.
- *
- * Sits at top:0 inside each pill (overflow:hidden clips it).
- */
 .shine {
   position: absolute;
   top: 0;
@@ -93,24 +48,16 @@
   pointer-events: none;
   background: linear-gradient(
     90deg,
-    transparent              0%,
+    transparent               0%,
     rgba(255, 255, 255, 0.15) 20%,
     rgba(255, 255, 255, 0.28) 50%,
     rgba(255, 255, 255, 0.15) 80%,
-    transparent              100%
+    transparent               100%
   );
 }
 
 
 /* ── NAVBAR WRAPPER — fully transparent ──────────────────── */
-/*
- * This element IS NOT the glass. It is only a positioning context.
- * No background. No border. No blur. No shadow. Nothing.
- *
- * pointer-events: none — clicks in the gaps between pills fall
- * through to the hero canvas below. Only the pills re-enable
- * pointer-events: auto.
- */
 .navbar {
   position: fixed;
   top: 16px;
@@ -122,140 +69,70 @@
   padding: 0 20px;
   z-index: 9000;
   pointer-events: none;
-
-  /* No background, border, or shadow — intentional */
 }
 
 
-/* ── LOGO PILL ───────────────────────────────────────────── */
+/* ── LOGO PILL — Shader version ──────────────────────────── */
 /*
- * Small rounded-square glass container, far left.
- * 44×44px: large enough to be a comfortable touch target,
- * small enough to feel like a badge/emblem.
- * border-radius: 14px — rounded square (not full circle).
- *
- * "SJ" in a light font weight — looks like an engraved monogram.
+ * GlowingBorderButton provides the visual border + fill.
+ * This class only handles flex positioning.
  */
 .logoPill {
-  composes: pill;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 44px;
-  height: 44px;
-  /*
-   * Circle shape — border-radius: 9999px on a 44×44 square = perfect circle.
-   * Matches the reference: a circular outlined badge/emblem.
-   */
-  border-radius: 9999px;
-  text-decoration: none;
   flex-shrink: 0;
-  transition: opacity 0.18s ease;
-  /*
-   * Override pill base: explicit transparent glass so it doesn't look
-   * like a solid filled circle. The backdrop-filter blur + border ring
-   * define it visually — not the fill opacity.
-   */
-  background: rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(16px) saturate(180%);
-  -webkit-backdrop-filter: blur(16px) saturate(180%);
-  /* More visible ring border — reads as an outlined circular badge */
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  box-shadow:
-    0 0 0 0.5px rgba(255, 255, 255, 0.10) inset,
-    0 4px 24px rgba(0, 0, 0, 0.15),
-    0 1px 4px rgba(0, 0, 0, 0.10);
-}
-
-.logoPill:hover { opacity: 0.72; }
-.logoPill:focus-visible {
-  outline: 1.5px solid rgba(255, 255, 255, 0.60);
-  outline-offset: 3px;
-  border-radius: 9999px;
-}
-
-.sjText {
-  font-size: 13px;
-  font-weight: 300;
-  letter-spacing: 0.04em;
-  color: rgba(10, 10, 10, 0.82);
-  line-height: 1;
-  /* Prevent selection on a decorative monogram */
-  user-select: none;
-}
-
-
-/* ── NAV LINKS PILL — desktop, absolute center ───────────── */
-/*
- * Positioned absolute center using left:50% + translateX(-50%).
- * This centers it relative to the VIEWPORT, not the flex row,
- * so it stays perfectly centered regardless of logo/resume widths.
- *
- * Content-hugging: no flex-grow, width is determined by its content.
- * The pill only stretches as wide as the links inside it need.
- *
- * Note: position:absolute inside position:fixed — the fixed parent
- * is the containing block, so left:50% = 50% of viewport width. ✓
- */
-.linksPill {
-  composes: pill;
+  pointer-events: auto;
   display: flex;
   align-items: center;
-  gap: 2px;
-  height: 44px;
-  /*
-   * Side padding: 10px pill margin + 13px link padding = 23px from edge to text.
-   * Ensures equal breathing room on all sides.
-   */
-  padding: 0 10px;
-  border-radius: 100px;
-  /*
-   * Stronger border — crisp 1px outline visible against both light and
-   * dark content behind it. At 0.16 white opacity it reads cleanly over
-   * the portrait image without being garish on the white background.
-   */
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  transition: opacity 0.18s ease;
+}
 
+.logoPill:hover { opacity: 0.82; }
+
+
+/* ── NAV LINKS PILL — Shader version ─────────────────────── */
+/*
+ * GlowingBorderButton (width="auto") wraps the row.
+ * CSS only provides absolute centering.
+ * Hidden on mobile — hamburger takes over.
+ */
+.linksPillShader {
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
-  white-space: nowrap;
-
-  transition: background 0.3s ease, backdrop-filter 0.3s ease, -webkit-backdrop-filter 0.3s ease;
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
 }
 
-.linksPill:hover,
-.linksPill:focus-within {
-  background: rgba(255, 255, 255, 0.14);
-  backdrop-filter: blur(22px) saturate(200%);
-  -webkit-backdrop-filter: blur(22px) saturate(200%);
-}
-
-.navLink {
+/* Light text on the dark inner gradient fill */
+.navLinkShader {
   font-size: 13.5px;
   font-weight: 400;
   letter-spacing: -0.01em;
-  color: rgba(10, 10, 10, 0.65);
+  color: rgba(200, 200, 200, 0.88);
   padding: 6px 13px;
   border-radius: 100px;
   text-decoration: none;
+  white-space: nowrap;
   transition: color 0.16s ease, background 0.16s ease;
+  position: relative;
+  z-index: 20;
 }
 
-.navLink:hover {
-  color: rgba(10, 10, 10, 0.90);
-  background: rgba(0, 0, 0, 0.05);
+.navLinkShader:hover {
+  color: rgba(255, 255, 255, 1.0);
+  background: rgba(255, 255, 255, 0.08);
 }
 
-.navLink:focus-visible {
-  outline: 1.5px solid rgba(10, 10, 10, 0.35);
+.navLinkShader:focus-visible {
+  outline: 1.5px solid rgba(255, 255, 255, 0.5);
   outline-offset: 2px;
 }
 
 
-/* ── HAMBURGER PILL — mobile only, absolute center ───────── */
+/* ── HAMBURGER PILL — mobile only, CSS glass ─────────────── */
 /*
- * Replaces the links pill on mobile — same absolute center position.
+ * Replaces the links pill on mobile. No GlowingBorderButton here —
+ * keeps CSS glass so there's no WebGL cost on mobile.
  * Hidden on desktop via display:none.
  */
 .hamburgerPill {
@@ -309,102 +186,36 @@
 .barBot { transform: translateY(-6px) rotate(-45deg);}
 
 
-/* ── RESUME PILL — far right ─────────────────────────────── */
+/* ── RESUME PILL — Shader version ────────────────────────── */
 /*
- * The CTA uses a slightly more opaque white fill — it reads as
- * the primary action. Still very transparent compared to a solid button.
- * Color: white filled (slightly), not the same frosted dark as the links pill.
+ * GlowingBorderButton at width=130 height=44.
+ * CSS only: flex-shrink, pointer-events, hover lift.
  */
-.resumePill {
-  composes: pill;
+.resumePillShader {
+  flex-shrink: 0;
+  pointer-events: auto;
   display: flex;
   align-items: center;
-  gap: 5px;
-  height: 44px;
-  /*
-   * Padding increased: 0 22px gives the text comfortable room
-   * so it doesn't look cramped or flat against the pill edges.
-   */
-  padding: 0 22px;
-  /* border-radius: 100px = fully rounded pill ends (circular caps) */
-  border-radius: 100px;
-  flex-shrink: 0;
-
-  /* Slightly more opaque than nav pill — signals "primary action" */
-  background: rgba(255, 255, 255, 0.82);
-  border: 1px solid rgba(255, 255, 255, 0.60);
-  /*
-   * Float shadow: 0 4px 24px rgba(0,0,0,0.15) as requested —
-   * gives depth so the resume pill doesn't look flat/pasted.
-   */
-  box-shadow:
-    0 0 0 0.5px rgba(255, 255, 255, 0.30) inset,
-    0 4px 24px rgba(0, 0, 0, 0.15),
-    0 1px 3px rgba(0, 0, 0, 0.10);
-
-  font-size: 13.5px;
-  font-weight: 500;
-  letter-spacing: -0.01em;
-  color: rgba(10, 10, 10, 0.86);
-  text-decoration: none;
-  white-space: nowrap;
-
-  transition:
-    background  0.18s ease,
-    box-shadow  0.18s ease,
-    transform   0.26s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: transform 0.26s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-.resumePill:hover {
-  background: rgba(255, 255, 255, 0.95);
+.resumePillShader:hover {
   transform: translateY(-1.5px);
-  box-shadow:
-    0 0 0 0.5px rgba(255, 255, 255, 0.50) inset,
-    0 6px 32px rgba(0, 0, 0, 0.16),
-    0 1px 6px rgba(0, 0, 0, 0.10);
 }
 
-.resumePill:active {
+.resumePillShader:active {
   transform: translateY(0) scale(0.98);
   transition-duration: 0.08s;
 }
 
-.resumePill:focus-visible {
-  outline: 1.5px solid rgba(10, 10, 10, 0.40);
-  outline-offset: 3px;
-}
-
-/* Arrow shifts northeast on hover */
-.ctaArrow {
-  flex-shrink: 0;
-  transition: transform 0.24s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.resumePill:hover .ctaArrow {
-  transform: translate(1.5px, -1.5px);
-}
-
 
 /* ── MOBILE PANEL ────────────────────────────────────────── */
-/*
- * A separate fixed element — NOT inside the navbar wrapper.
- * Positioned just below the pills row.
- *
- * Vertical position calculation:
- *   .navbar top:   16px
- *   pill height:   44px
- *   gap:           10px
- *   total:         70px from viewport top
- *
- * Same glass recipe as the pills. Content-revealing backdrop-filter.
- * max-height: 0 → 400px transition for smooth reveal.
- */
 .mobilePanel {
   position: fixed;
   top: 70px;
   left: 20px;
   right: 20px;
-  z-index: 8999; /* Just below the navbar pills */
+  z-index: 8999;
   border-radius: 20px;
   overflow: hidden;
 
@@ -519,41 +330,30 @@
 @media (max-width: 768px) {
   .navbar { padding: 0 14px; top: 12px; }
 
-  /* Desktop links pill: hidden */
-  .linksPill { display: none; }
+  /* Desktop shader pills: hidden on mobile */
+  .linksPillShader { display: none; }
+  .resumePillShader { display: none; }
+  .logoPill { display: none; }
 
   /* Hamburger pill: shown */
   .hamburgerPill { display: flex; }
-
-  /* Resume pill: stays visible but slightly smaller */
-  .resumePill { height: 40px; padding: 0 14px; font-size: 13px; }
-
-  /* Logo pill: slightly smaller */
-  .logoPill { width: 40px; height: 40px; border-radius: 12px; }
 
   /* Mobile panel: tighter insets */
   .mobilePanel { left: 14px; right: 14px; top: 62px; }
 }
 
-@media (max-width: 480px) {
-  /* Very small screens: hide resume pill text, keep just icon */
-  /* (optional — keeping it shown for now) */
-}
-
 
 /* ── REDUCED MOTION ──────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
-  .pill,
-  .logoPill,
-  .linksPill,
-  .resumePill,
   .hamburgerPill,
   .mobilePanel,
   .mobilePanelOpen,
   .mobileLink,
   .mobileCta,
   .bar,
-  .ctaArrow {
+  .logoPill,
+  .linksPillShader,
+  .resumePillShader {
     transition: none !important;
   }
 
