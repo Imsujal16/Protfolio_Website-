@@ -1,0 +1,48 @@
+/* ============================================================
+   Global reset — minimal, purposeful.
+   The hero (MaskReveal) is full-screen via position:absolute.
+   Body overflow is scroll so the scroll-aware navbar works.
+   ============================================================ */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* Scroll is enabled on html/body so the navbar scroll listener fires */
+  overflow-x: hidden;
+}
+
+body {
+  /* Full-screen portrait hero is absolutely positioned — body can scroll */
+  background: #ffffff;
+  font-family:
+    'Inter', 'DM Sans',
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  /* min-height lets future sections sit below the hero */
+  min-height: 100vh;
+}
+
+#root {
+  min-height: 100vh;
+  position: relative;
+}
+
+/* Global focus-visible: consistent across all browsers */
+:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.6);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Reduced motion: collapse all transitions globally */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
