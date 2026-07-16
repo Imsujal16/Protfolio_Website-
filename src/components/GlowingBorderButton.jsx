@@ -54,7 +54,7 @@ export function GlowingBorderButton({
     u_contour:    0,
     u_angle:      45,
     u_scale:      8,
-    u_shape:      1,
+    u_shape:      0, // 0 = none/fill, 1 = circle. We want it to fill so CSS border-radius can mask it into a pill!
     u_offsetX:    0.1,
     u_offsetY:    -0.1,
   },
