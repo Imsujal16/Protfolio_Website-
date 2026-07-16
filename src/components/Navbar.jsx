@@ -101,8 +101,6 @@ export default function Navbar() {
           width={44}
           height={44}
           borderRadius="100px"
-          innerFrom="#252525"
-          innerTo="#111111"
           innerMargin={2}
           style={{ flexShrink: 0 }}
         >

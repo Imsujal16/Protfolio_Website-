@@ -3,21 +3,23 @@
  *
  * Liquid-metal animated shader border using @paper-design/shaders.
  *
- * Two sizing modes:
- *   Fixed:  width={44} height={44}  → exact pixel size
- *   Auto:   width="auto"            → wrapper uses display:inline-flex,
- *                                     grows to fit children naturally
+ * Layout (back → front):
+ *   [0] shader canvas  — position:absolute inset:0      (z:0, pointer-events:none)
+ *   [1] dark fill      — position:absolute inset:2px    (z:1, pointer-events:none)
+ *   [2] content        — IN-FLOW, position:relative     (z:2)
  *
- * The inner fill is a dark gradient (#202020 → #000) so text
- * should be light-colored (handled by the consumer).
+ * The outer wrapper uses `padding: innerMargin` so the in-flow content
+ * is inset from the edges. This means the outer div's natural size
+ * always equals content size + (2 * innerMargin), which:
+ *   - Correctly sizes the div in auto-width (display:inline-flex) mode
+ *   - Correctly reveals the shader border ring around the content
  *
- * All extra props (className, style, onClick, aria-*, etc.)
- * are forwarded to the outer wrapper div.
+ * Fixed mode  (width={n})  → explicit px size, content centers via flexbox
+ * Auto  mode  (width="auto") → outer grows with content naturally
  */
 
 import { useRef, useEffect, useLayoutEffect, useCallback } from 'react';
 
-/* Inject canvas sizing rules once globally */
 function ensureGlobalStyle() {
   if (document.getElementById('gbb-shader-style')) return;
   const style = document.createElement('style');
@@ -41,8 +43,8 @@ export function GlowingBorderButton({
   height = 44,
   borderRadius = '100px',
   innerMargin = 2,
-  innerFrom = '#202020',
-  innerTo   = '#000000',
+  /* Inner styles (frosted glass) */
+  innerBackground = 'rgba(20, 20, 20, 0.35)',
   shaderParams = {
     u_repetition: 4,
     u_softness:   0.5,
@@ -67,9 +69,6 @@ export function GlowingBorderButton({
   const shaderRef = useRef(null);
   const mountRef  = useRef(null);
 
-  const isAutoWidth = width === 'auto';
-
-  /* ── Boot shader (async import keeps initial bundle lean) ─── */
   const initShader = useCallback(async () => {
     if (!shaderRef.current) return;
     if (mountRef.current?.destroy) {
@@ -96,57 +95,72 @@ export function GlowingBorderButton({
     };
   }, [initShader]);
 
-  /* ── Auto-width: nudge ShaderMount on resize ─────────────── */
+  /* ── ResizeObserver to fix Bug 1 (Shader Canvas Resizing) ── */
   useLayoutEffect(() => {
-    if (!isAutoWidth) return;
     const outer = outerRef.current;
     if (!outer) return;
+    
     const ro = new ResizeObserver(() => {
-      mountRef.current?.setSize?.(outer.clientWidth, outer.clientHeight);
+      if (!mountRef.current || !shaderRef.current) return;
+      
+      const rectWidth = outer.clientWidth;
+      const rectHeight = outer.clientHeight;
+      
+      // Try calling setSize if the API provides it
+      if (typeof mountRef.current.setSize === 'function') {
+        mountRef.current.setSize(rectWidth, rectHeight);
+      } else {
+        // Fallback: manually update the canvas drawing buffer resolution
+        const canvas = shaderRef.current.querySelector('canvas');
+        if (canvas) {
+          const dpr = window.devicePixelRatio || 1;
+          canvas.width = rectWidth * dpr;
+          canvas.height = rectHeight * dpr;
+        }
+      }
     });
+    
     ro.observe(outer);
     return () => ro.disconnect();
-  }, [isAutoWidth]);
+  }, []);
 
-  /* ── Outer wrapper style ─────────────────────────────────── */
+  const isAutoWidth = width === 'auto';
+  const m = `${innerMargin}px`;
+
+  /*
+   * Outer wrapper style.
+   * KEY: padding:innerMargin creates the visual border gap (revealed shader ring).
+   * Content is IN-FLOW so the wrapper measures it correctly for auto-width.
+   */
   const outerStyle = {
+    /* Stacking context for the absolute shader/fill layers */
     position:    'relative',
     overflow:    'hidden',
     borderRadius,
-    /* sizing */
+    /* Padding creates the inset gap that reveals the shader border */
+    padding:     m,
+    /* Layout */
+    display:     'inline-flex',
+    alignItems:  'center',
+    justifyContent: 'center',
+    flexShrink:  0,
+    boxSizing:   'border-box',
+    /* Explicit size for fixed mode */
     ...(isAutoWidth
-      ? {
-          display: 'inline-flex',
-          alignItems: 'center',
+      ? { height: typeof height === 'number' ? `${height}px` : height }
+      : {
+          width:  typeof width  === 'number' ? `${width}px`  : width,
           height: typeof height === 'number' ? `${height}px` : height,
         }
-      : {
-          display: 'block',
-          width:   typeof width  === 'number' ? `${width}px`  : width,
-          height:  typeof height === 'number' ? `${height}px` : height,
-        }
     ),
-    /* caller overrides last so they win over the defaults above */
+    /* Caller overrides win */
     ...styleProp,
-  };
-
-  /* ── Inner dark fill (2px inset reveals the shader border) ── */
-  const innerStyle = {
-    position:       'absolute',
-    inset:          `${innerMargin}px`,
-    zIndex:         10,
-    display:        'flex',
-    alignItems:     'center',
-    justifyContent: 'center',
-    borderRadius,
-    background:     `linear-gradient(to bottom, ${innerFrom}, ${innerTo})`,
-    pointerEvents:  'auto',
-    ...contentStyle,
   };
 
   return (
     <div ref={outerRef} className={className} style={outerStyle} {...rest}>
-      {/* Animated shader border layer */}
+
+      {/* [0] Animated shader border — fills entire outer including padding zone */}
       <div
         ref={shaderRef}
         className="gbb-shader-container"
@@ -159,10 +173,38 @@ export function GlowingBorderButton({
         }}
       />
 
-      {/* Dark inner fill */}
-      <div style={innerStyle} className={contentClassName}>
+      {/* [1] Frosted glass inner fill (Fix for Bug 2) */}
+      <div
+        style={{
+          position:      'absolute',
+          inset:         m,
+          zIndex:        1,
+          borderRadius:  `calc(${borderRadius} - ${m})`,
+          background:    innerBackground,
+          backdropFilter: 'blur(16px) saturate(180%)',
+          WebkitBackdropFilter: 'blur(16px) saturate(180%)',
+          pointerEvents: 'none',
+        }}
+      />
+
+      {/* [2] Content — in-flow, above both absolute layers */}
+      <div
+        style={{
+          position:       'relative',
+          zIndex:         2,
+          display:        'flex',
+          alignItems:     'center',
+          justifyContent: 'center',
+          width:          '100%',
+          pointerEvents:  'auto',
+          textShadow:     '0 1px 3px rgba(0,0,0,0.5)', /* Fix text legibility over frosted glass */
+          ...contentStyle,
+        }}
+        className={contentClassName}
+      >
         {children}
       </div>
+
     </div>
   );
 }
