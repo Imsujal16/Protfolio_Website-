@@ -64,8 +64,9 @@ function MenuIcon({ open }) {
 /* ─────────────────────────────────────────────────────────── */
 
 export default function Navbar() {
-  const [open, setOpen] = useState(false);
-  const scrolled        = useScrolled(20);
+  const [open, setOpen]         = useState(false);
+  const [isHovering, setIsHovering] = useState(false);
+  const scrolled                = useScrolled(20);
   const triggerRef      = useRef(null);
 
   /* Escape key closes mobile panel */
@@ -93,6 +94,26 @@ export default function Navbar() {
     scrolled ? styles.scrolled : '',
   ].filter(Boolean).join(' ');
 
+  /* ── Inline style object for the links pill ──────────────────
+   * Inline styles always win over module CSS — this guarantees
+   * the background/blur values are actually applied in the DOM,
+   * bypassing any CSS specificity issues.
+   * Default:  rgba(255,255,255,0.12) / blur(12px)
+   * Hovering: rgba(255,255,255,0.22) / blur(24px)
+   * ─────────────────────────────────────────────────────────── */
+  const linksPillStyle = {
+    background:          isHovering
+                           ? 'rgba(255, 255, 255, 0.22)'
+                           : 'rgba(255, 255, 255, 0.12)',
+    backdropFilter:      isHovering
+                           ? 'blur(24px) saturate(200%)'
+                           : 'blur(12px) saturate(160%)',
+    WebkitBackdropFilter: isHovering
+                           ? 'blur(24px) saturate(200%)'
+                           : 'blur(12px) saturate(160%)',
+    transition: 'background 0.3s ease, backdrop-filter 0.3s ease, -webkit-backdrop-filter 0.3s ease',
+  };
+
   return (
     <>
       {/* ── Transparent wrapper — no background, no border, no blur ── */}
@@ -106,9 +127,13 @@ export default function Navbar() {
         </a>
 
         {/* ② Nav links pill — absolutely centered, desktop only */}
+        {/* onMouseEnter/Leave toggle isHovering → pillStyle applied via inline style */}
         <nav
           className={styles.linksPill}
           aria-label="Site sections"
+          onMouseEnter={() => setIsHovering(true)}
+          onMouseLeave={() => setIsHovering(false)}
+          style={linksPillStyle}
         >
           <span className={styles.shine} aria-hidden="true" />
           {NAV_LINKS.map(({ label, href }) => (
