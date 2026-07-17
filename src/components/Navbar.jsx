@@ -101,49 +101,33 @@ export default function Navbar() {
           width={44}
           height={44}
           borderRadius="100px"
-          innerMargin={2}
-          style={{ flexShrink: 0 }}
+          innerMargin={1.5}
+          className={styles.logoPill}
+          innerBackground="transparent"
         >
           <a
             href="/"
             aria-label="SJ — home"
-            style={{
-              display:        'flex',
-              alignItems:     'center',
-              justifyContent: 'center',
-              width:          '100%',
-              height:         '100%',
-              textDecoration: 'none',
-              color:          'rgba(225, 225, 225, 0.92)',
-              fontSize:       '13px',
-              fontWeight:     300,
-              letterSpacing:  '0.04em',
-              lineHeight:     1,
-              userSelect:     'none',
-            }}
+            className={styles.logoLink}
           >
             SJ
           </a>
         </GlowingBorderButton>
 
         {/* ② NAV LINKS PILL — auto-width, absolutely centered */}
-        {/*   position:absolute + left:50% lives on the outer GlowingBorderButton div */}
-        {/*   via the style prop so it correctly overrides the component's default    */}
         <GlowingBorderButton
           width="auto"
           height={44}
           borderRadius="100px"
-          innerMargin={2}
-          style={{
-            position:  'absolute',
-            left:      '50%',
-            transform: 'translateX(-50%)',
-          }}
-          contentStyle={{ padding: '0 10px', gap: '2px' }}
+          innerMargin={1.5}
+          className={styles.linksPill}
+          style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)' }}
+          innerBackground="transparent"
+          contentStyle={{ padding: '0 6px' }}
         >
-          <nav aria-label="Site sections" style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+          <nav aria-label="Site sections" className={styles.navLinksContainer}>
             {NAV_LINKS.map(({ label, href }) => (
-              <a key={label} href={href} className={styles.navLinkShader}>
+              <a key={label} href={href} className={styles.navLink}>
                 {label}
               </a>
             ))}
@@ -169,31 +153,16 @@ export default function Navbar() {
           width={130}
           height={44}
           borderRadius="100px"
-          innerMargin={2}
-          style={{
-            flexShrink: 0,
-            transition: 'transform 0.26s cubic-bezier(0.34,1.56,0.64,1)',
-          }}
+          innerMargin={1.5}
+          className={styles.resumePill}
+          innerBackground="transparent"
         >
           <a
             href="/resume.pdf"
             target="_blank"
             rel="noopener noreferrer"
             aria-label="View resume (opens in new tab)"
-            style={{
-              display:        'flex',
-              alignItems:     'center',
-              justifyContent: 'center',
-              gap:            '5px',
-              width:          '100%',
-              height:         '100%',
-              textDecoration: 'none',
-              color:          'rgba(215, 215, 215, 0.92)',
-              fontSize:       '13.5px',
-              fontWeight:     500,
-              letterSpacing:  '-0.01em',
-              whiteSpace:     'nowrap',
-            }}
+            className={styles.resumeLink}
           >
             <span>Resume</span>
             <ArrowUpRight />

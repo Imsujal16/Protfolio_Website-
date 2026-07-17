@@ -19,23 +19,42 @@
    ============================================================ */
 
 
-/* ── PILL GLASS RECIPE (hamburger only) ─────────────────────
-   Shared glass base — now only consumed by .hamburgerPill.
+/* ── PILL GLASS RECIPE ───────────────────────────────────────
+   Shared glass base for all desktop and mobile pills.
    ─────────────────────────────────────────────────────────── */
 .pill {
-  background: rgba(255, 255, 255, 0.07);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  /* bg-white/10 equivalent */
+  background: rgba(255, 255, 255, 0.06);
+  /* backdrop-blur-xl equivalent */
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
 
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  /* border-white/20 equivalent */
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  
+  /* shadow-black/5 equivalent for soft lift */
   box-shadow:
-    0 0 0 0.5px rgba(255, 255, 255, 0.10) inset,
-    0 4px 24px rgba(0, 0, 0, 0.15),
-    0 1px 4px rgba(0, 0, 0, 0.10);
+    0 4px 12px rgba(0, 0, 0, 0.05),
+    0 1px 3px rgba(0, 0, 0, 0.03);
 
+  border-radius: 100px;
   position: relative;
   overflow: hidden;
   pointer-events: auto;
+}
+
+/* CRITICAL FIX 2: Override GlowingBorderButton internals */
+:global(.gbb-inner-fill) {
+  background-color: rgba(255, 255, 255, 0.05) !important;
+  backdrop-filter: blur(24px) !important;
+  -webkit-backdrop-filter: blur(24px) !important;
+}
+
+:global(.gbb-shader-container) {
+  padding: 1.5px;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
 }
 
 /* ── Top-edge refraction shine ───────────────────────────── */
@@ -72,31 +91,55 @@
 }
 
 
-/* ── LOGO PILL — no CSS needed (GlowingBorderButton style prop handles it) */
-/* Hover opacity handled inline via React if needed */
+/* ── LOGO PILL ───────────────────────────────────────────── */
+.logoPill {
+  composes: pill;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.18s ease;
+}
+.logoPill:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+.logoLink {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  text-decoration: none;
+  color: rgba(255, 255, 255, 0.95);
+  font-size: 13px;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  user-select: none;
+}
 
-
-/* ── NAV LINKS PILL — Shader version ─────────────────────── */
-/*
- * GlowingBorderButton (width="auto") wraps the row.
- * CSS only provides absolute centering.
- * Hidden on mobile — hamburger takes over.
- */
-.linksPillShader {
+/* ── NAV LINKS PILL ──────────────────────────────────────── */
+.linksPill {
+  composes: pill;
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
-  pointer-events: auto;
   display: flex;
   align-items: center;
+  height: 44px;
+  padding: 0 6px;
 }
-
-/* Light text on the dark inner gradient fill */
-.navLinkShader {
+.navLinksContainer {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.navLink {
   font-size: 13.5px;
   font-weight: 400;
   letter-spacing: -0.01em;
-  color: rgba(200, 200, 200, 0.88);
+  color: rgba(255, 255, 255, 0.7);
   padding: 6px 13px;
   border-radius: 100px;
   text-decoration: none;
@@ -105,13 +148,11 @@
   position: relative;
   z-index: 20;
 }
-
-.navLinkShader:hover {
+.navLink:hover {
   color: rgba(255, 255, 255, 1.0);
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.1);
 }
-
-.navLinkShader:focus-visible {
+.navLink:focus-visible {
   outline: 1.5px solid rgba(255, 255, 255, 0.5);
   outline-offset: 2px;
 }
@@ -174,9 +215,35 @@
 .barBot { transform: translateY(-6px) rotate(-45deg);}
 
 
-/* ── RESUME PILL — no CSS needed (GlowingBorderButton style prop handles it) */
-
-
+/* ── RESUME PILL ─────────────────────────────────────────── */
+.resumePill {
+  composes: pill;
+  width: 130px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: transform 0.26s cubic-bezier(0.34,1.56,0.64,1), background 0.18s ease;
+}
+.resumePill:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: translateY(-1px);
+}
+.resumeLink {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  width: 100%;
+  height: 100%;
+  text-decoration: none;
+  color: rgba(255, 255, 255, 0.95);
+  font-size: 13.5px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
 /* ── MOBILE PANEL ────────────────────────────────────────── */
 .mobilePanel {
   position: fixed;
@@ -298,9 +365,9 @@
 @media (max-width: 768px) {
   .navbar { padding: 0 14px; top: 12px; }
 
-  /* Desktop shader pills: hidden on mobile */
-  .linksPillShader { display: none; }
-  .resumePillShader { display: none; }
+  /* Desktop pills: hidden on mobile */
+  .linksPill { display: none; }
+  .resumePill { display: none; }
   .logoPill { display: none; }
 
   /* Hamburger pill: shown */
@@ -320,8 +387,8 @@
   .mobileCta,
   .bar,
   .logoPill,
-  .linksPillShader,
-  .resumePillShader {
+  .linksPill,
+  .resumePill {
     transition: none !important;
   }
 

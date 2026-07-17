@@ -198,6 +198,7 @@ export function GlowingBorderButton({
 
       {/* [1] Frosted glass inner fill (Fix for Bug 2) */}
       <div
+        className="gbb-inner-fill"
         style={{
           position:      'absolute',
           inset:         m,

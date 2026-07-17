@@ -1,0 +1,348 @@
+/* ============================================================
+   HeroPanels.css — v2 (bug-fix rewrite)
+
+   LAYOUT CHANGE from v1:
+     v1: hero-wrapper was display:flex, panels were flex siblings
+         of MaskReveal — this squashed the 100vw portrait.
+     v2: hero-overlay-wrapper is position:relative ONLY.
+         Panels are position:absolute, overlaid on top of MaskReveal.
+         MaskReveal is untouched in the flow, fills the wrapper.
+
+   ANIMATION CHANGE from v1:
+     v1: per-character clip-path — broke when inside background-clip:text.
+     v2: segment-level curtain reveal — .seg-curtain (overflow:hidden)
+         clips a .seg-inner that animates translateY(105%→0).
+         This is compatible with gradient text on the inner element.
+
+   COLOR TOKENS (single source of truth):
+     Warm accent: hsl(340, 70%, 60%) — designer / left block
+     Cool accent: hsl(195, 80%, 55%) — coder   / right block
+   ============================================================ */
+
+:root {
+  --warm:        hsl(340, 70%, 60%);
+  --warm-mid:    hsl(320, 65%, 68%);
+  --warm-border: hsla(340, 70%, 60%, 0.30);
+  --warm-glow:   hsla(340, 70%, 60%, 0.50);
+
+  --cool:        hsl(195, 80%, 55%);
+  --cool-mid:    hsl(210, 75%, 65%);
+  --cool-border: hsla(195, 80%, 55%, 0.30);
+  --cool-glow:   hsla(195, 80%, 55%, 0.50);
+}
+
+/* ── Wrapper: transparent positioning context only ──────── */
+/*
+ * NOT a flex container. NOT a grid. Just position:relative.
+ * MaskReveal (100vw × 100vh) fills it naturally in document flow.
+ * Panels are position:absolute on top — no effect on MaskReveal sizing.
+ */
+.hero-overlay-wrapper {
+  position: relative;
+}
+
+/* ── Panel base: absolutely overlaid, zero background ───── */
+/*
+ * position:absolute removes panels from document flow entirely.
+ * MaskReveal is unaffected — it still fills the wrapper as before.
+ * top:0 + height:100% vertically spans the full hero height.
+ * No background, border, shadow, or card styling.
+ */
+.side-panel {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  /*
+   * Width sized to comfortably hold the larger headline text.
+   * Verification (white-space:nowrap):
+   *   "designer." at 60px, 800-weight ≈ 9 × 26px = ~234px  → fits in 300px ✓
+   *   "<coder/>"  at 60px, monospace   ≈ 8 × 30px = ~240px  → fits in 300px ✓
+   */
+  width: clamp(240px, 23vw, 340px);
+  z-index: 20; /* above MaskReveal's back.png (z:10) */
+  pointer-events: auto;
+  /* ✓ Zero background — confirmed */
+  /* ✓ Zero border    — confirmed */
+  /* ✓ Zero shadow    — confirmed */
+}
+
+/*
+ * SYMMETRY: Both panels use the EXACT SAME inset value (clamp(28px, 4vw, 64px))
+ * from their respective viewport edge. The inner gap toward the portrait is
+ * identical (18px) on both sides. Equal → balanced composition.
+ *
+ * padding shorthand: top | right | bottom | left
+ * Left panel:  outer gap = padding-LEFT,  inner gap = padding-RIGHT
+ * Right panel: outer gap = padding-RIGHT, inner gap = padding-LEFT
+ */
+.side-panel--left {
+  left: 0;
+  align-items: flex-start;
+  padding: 0 18px 0 clamp(28px, 4vw, 64px);
+}
+
+.side-panel--right {
+  right: 0;
+  align-items: flex-start;
+  padding: 0 clamp(28px, 4vw, 64px) 0 18px;
+}
+
+/* ── Eyebrow label ───────────────────────────────────────── */
+.eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+  font-size: clamp(10px, 0.9vw, 13px);
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  margin-bottom: clamp(14px, 1.4vw, 20px);
+  /* GSAP sets initial state in useEffect */
+  opacity: 0;
+  transform: translateY(12px);
+}
+
+.eyebrow--warm { color: var(--warm); }
+.eyebrow--cool { color: var(--cool); }
+
+.eyebrow-dot {
+  font-size: 8px;
+  display: inline-block;
+}
+
+/* ── Headline ────────────────────────────────────────────── */
+/*
+ * white-space: nowrap — prevents line-wrap of "<coder/>" or "designer."
+ * overflow: visible   — never clips the text
+ * font-size clamp: chosen so "designer." fits inside min panel width (180px)
+ *   At 22px, 800-weight: ~9 chars × ~14px = 126px → fits in 180px ✓
+ *   At 40px, 800-weight: ~9 chars × ~25px = 225px → fits in 252px ✓
+ */
+.headline {
+  /*
+   * Hero-display scale — visually dominant, commands its side of the hero.
+   * clamp min: 36px — still readable at narrow desktop (960–1100px)
+   * clamp fluid: 5vw  — scales with viewport
+   * clamp max: 72px — caps so very wide displays don't feel oversized
+   *
+   * Fit check with white-space:nowrap:
+   *   Panel width at min (240px), headline at min (36px):
+   *   "designer." = 9 chars × ~22px = ~198px < 240px ✓
+   *   Panel width at max (340px), headline at max (72px):
+   *   "designer." = 9 chars × ~44px = ~396px → exceeds 340px at 72px!
+   *   Adjusted: clamp max = 60px:
+   *   "designer." = 9 × ~37px = ~333px < 340px ✓
+   *   "<coder/>"  = 8 × ~42px (mono) = ~336px < 340px ✓
+   */
+  font-size: clamp(36px, 4.5vw, 60px);
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  margin-bottom: clamp(16px, 1.6vw, 24px);
+  white-space: nowrap;
+  overflow: visible;
+}
+
+/* ── Segment curtain — the animation container ───────────── */
+/*
+ * ANIMATION APPROACH (v2):
+ *
+ * The "curtain reveal" pattern is more reliable than per-char clip-path,
+ * especially when the inner content has gradient background-clip:text.
+ *
+ * Structure:
+ *   <span class="seg-curtain">    ← overflow:hidden clips below baseline
+ *     <span class="seg-inner">    ← starts at translateY(105%), GSAP → 0
+ *       [text or gradient span]
+ *     </span>
+ *   </span>
+ *
+ * The curtain slit = the seg-curtain box.
+ * As seg-inner slides up, text appears to emerge from below.
+ */
+.seg-curtain {
+  display: inline-block;
+  overflow: hidden;
+  vertical-align: bottom;
+  /* Slightly taller line-height prevents descender clipping */
+  line-height: 1.15;
+  padding-bottom: 0.06em;
+}
+
+.seg-inner {
+  display: inline-block;
+  will-change: transform;
+  /* Initial y set by GSAP gsap.set() in useEffect — not here.
+     Setting it in CSS would make text invisible before JS loads. */
+}
+
+/* ── Gradient text ───────────────────────────────────────── */
+/*
+ * background-clip:text + background-size:220% gives room for
+ * the shimmer: GSAP animates backgroundPosition 0%→200%→0% in a loop.
+ * NOTE: -webkit-text-fill-color:transparent must override color.
+ */
+.grad-warm {
+  background: linear-gradient(
+    100deg,
+    var(--warm-mid) 0%,
+    var(--warm)     40%,
+    #ffffff         60%,
+    var(--warm)     80%,
+    var(--warm-mid) 100%
+  );
+  background-size: 220% 100%;
+  background-position: 0% 50%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+
+.grad-cool {
+  background: linear-gradient(
+    100deg,
+    var(--cool-mid) 0%,
+    var(--cool)     40%,
+    #ffffff         60%,
+    var(--cool)     80%,
+    var(--cool-mid) 100%
+  );
+  background-size: 220% 100%;
+  background-position: 0% 50%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+
+/* Monospace font for coder headline */
+.mono {
+  font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+  font-weight: 700;
+}
+
+/* ── Subtext ─────────────────────────────────────────────── */
+.subtext {
+  font-size: clamp(13px, 1.2vw, 16px);
+  font-weight: 400;
+  line-height: 1.65;
+  color: rgba(30, 30, 30, 0.55);
+  margin-bottom: clamp(18px, 1.8vw, 28px);
+  max-width: clamp(210px, 18vw, 280px);
+  white-space: normal;
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.subtext-emphasis {
+  color: rgba(10, 10, 10, 0.88);
+  font-weight: 600;
+}
+
+/* ── Pill tags ───────────────────────────────────────────── */
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tag {
+  font-size: clamp(11px, 1.05vw, 13px);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  padding: 6px 13px;
+  border-radius: 100px;
+  background: transparent;
+  cursor: default;
+  opacity: 0;
+  transform: translateY(8px) scale(0.92);
+  transition:
+    box-shadow 0.22s ease,
+    transform  0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Coder block: explicit column container so rows stack with matching gap */
+.tags-grid {
+  flex-direction: column; /* override .tags flex-direction (row) */
+  gap: 6px;               /* row-to-row gap = same as Designer block's pill gap */
+}
+
+/* Each explicit row inside .tags-grid */
+.tags-row {
+  display: flex;
+  flex-wrap: nowrap;  /* rows are fixed — no re-wrapping within a row */
+  gap: 6px;           /* pill-to-pill gap = same as Designer block */
+}
+
+.tag--warm {
+  color: var(--warm);
+  border: 1px solid var(--warm-border);
+}
+
+.tag--cool {
+  color: var(--cool);
+  border: 1px solid var(--cool-border);
+}
+
+.tag:hover { transform: scale(1.06) translateY(-1.5px); }
+.tag--warm:hover { box-shadow: 0 0 10px var(--warm-glow), 0 0 0 1px var(--warm-border); }
+.tag--cool:hover { box-shadow: 0 0 10px var(--cool-glow), 0 0 0 1px var(--cool-border); }
+
+/* ── Mobile / tablet ─────────────────────────────────────── */
+/*
+ * BUG 4 FIX: at ≤960px, absolute panels would overlap the portrait.
+ * Switch to document-flow layout: panels become static flex items
+ * stacked above (DesignerPanel, DOM order = first) and below (CoderPanel,
+ * DOM order = last) the hero image.
+ *
+ * The wrapper becomes a flex column.
+ * MaskReveal stays between the two panels in the vertical stack.
+ */
+@media (max-width: 960px) {
+  .hero-overlay-wrapper {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .side-panel {
+    position: static; /* leaves absolute flow */
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    padding: 40px 28px;
+  }
+
+  .side-panel--left  { padding-top: 88px; } /* clear the fixed navbar */
+
+  .headline {
+    white-space: normal; /* allow wrapping on narrow mobile */
+    overflow: hidden;
+    font-size: clamp(32px, 7vw, 52px);
+  }
+
+  /* Seg curtains still work on mobile */
+
+  .subtext { max-width: 100%; font-size: 14px; }
+}
+
+@media (max-width: 480px) {
+  .side-panel { padding: 32px 20px; }
+  .side-panel--left { padding-top: 76px; }
+  .headline { font-size: 34px; }
+}
+
+/* ── Reduced motion ──────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .eyebrow, .subtext, .tag {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  .seg-inner {
+    transform: none !important;
+  }
+}
