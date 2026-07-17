@@ -1,0 +1,105 @@
+/* ============================================================
+   AboutSection.css
+
+   LAYOUT CONTRACT
+   ──────────────────────────────────────────────────────────
+   .about-section              full-viewport section; black background
+     ├── .about-ambient-glitter  absolute fill; ambient GlitterWrap (z:0)
+     ├── .about-blackhole        absolute fill; BlackHole canvas (z:1)
+     └── .about-content          relative; About content (z:2)
+
+   BACKGROUND COLOUR CHAIN
+   ──────────────────────────────────────────────────────────
+   HeroTransitionShell overlay → #000000
+   AboutSection background    → #000000  (matches exactly — no seam)
+   BlackHole internal BG      → #000000  (hardcoded in component)
+
+   INITIAL STATE (Stage D entrance animation)
+   ──────────────────────────────────────────────────────────
+   opacity: 0; transform: translate3d(0, 20px, 0)
+   Stage D in useHeroTransition animates these to opacity:1, translateY:0
+   via the forwardRef on .about-section.
+   ============================================================ */
+
+/* ── Section container ───────────────────────────────────── */
+.about-section {
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
+  background: #000000; /* Matches BlackHole BG + Stage D overlay — no seam */
+
+  /* Stage D initial state — hook overrides via .style */
+  opacity: 0;
+  transform: translate3d(0, 20px, 0);
+  will-change: transform, opacity;
+}
+
+/* ── Ambient GlitterWrap layer ───────────────────────────── */
+/*
+ * Pinned to the section — scrolls with it.
+ * position:fixed would keep it screen-fixed, which would break
+ * when content extends beyond 100vh. position:absolute fills the
+ * section and scrolls naturally with it.
+ *
+ * To keep ambient GlitterWrap screen-fixed while user reads About,
+ * change position to fixed and remove the inset constraints.
+ * Current choice (absolute/inset:0) is simpler and avoids z-index fights.
+ */
+.about-ambient-glitter {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  /* Height matches first viewport of the About section */
+  height: 100vh;
+}
+
+/* ── BlackHole layer ─────────────────────────────────────── */
+/*
+ * Centred on the viewport — BlackHole at 50%/50% matches GlitterWrap's
+ * focal point (cx/cy = viewport centre). The tunnel was flying here.
+ *
+ * Size: 100vmin keeps it contained within both portrait and landscape.
+ * Adjust if the About content layout requires a different size.
+ */
+.about-blackhole {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100vmin;
+  height: 100vmin;
+  transform: translate(-50%, -50%);
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* ── About content ───────────────────────────────────────── */
+/*
+ * All About section text, images, and layout go here.
+ * position:relative ensures it stacks above the canvas layers.
+ * min-height:100vh so the section has scrollable height for content.
+ * Content placeholder — nothing here until About is built.
+ */
+.about-content {
+  position: relative;
+  z-index: 2;
+  min-height: 100vh;
+  /* Content layout will be defined when About is implemented */
+}
+
+/* ── Reduced motion ──────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .about-section {
+    /* Override Stage D initial state — show immediately at rest position */
+    opacity: 1;
+    transform: none;
+    transition: none !important;
+    animation: none !important;
+  }
+
+  .about-ambient-glitter,
+  .about-blackhole {
+    transition: none !important;
+    animation: none !important;
+  }
+}

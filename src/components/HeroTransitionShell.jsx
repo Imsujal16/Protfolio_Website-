@@ -36,18 +36,21 @@ import './HeroTransitionShell.css';
 /**
  * HeroTransitionShell
  *
- * @param {React.ReactNode}     children         - Hero content
- * @param {Object}              glitterProps     - Static GlitterWrap props (colours, density, etc.)
- *                                               speed/brightness/glitterIntensity/trailAmount are overridden by scroll.
- * @param {string}              [scrubZone]      - Height of the scroll corridor. Default '250vh'.
- *                                               Keep in sync with `end: '+=250%'` in useHeroTransition.js.
- * @param {React.RefObject}     [nextSectionRef] - Ref to the next-section shell so Stage D can animate it.
+ * @param {React.ReactNode}     children           - Hero content
+ * @param {Object}              glitterProps       - Static GlitterWrap props (colours, density, etc.)
+ *                                                 speed/brightness/glitterIntensity/trailAmount are overridden by scroll.
+ * @param {string}              [scrubZone]        - Height of the scroll corridor. Default '250vh'.
+ *                                                 Keep in sync with `end: '+=250%'` in useHeroTransition.js.
+ * @param {React.RefObject}     [nextSectionRef]   - Ref to the About section so Stage D can animate it.
+ * @param {Function}            [onBlackHoleUpdate] - Forwarded to Stage D for BlackHole pre-warm.
+ *                                                   Supplied by App.jsx from AboutSection's callback.
  */
 export default function HeroTransitionShell({
   children,
   glitterProps = {},
   scrubZone = '250vh',
   nextSectionRef,
+  onBlackHoleUpdate,
 }) {
   // ── DOM refs ─────────────────────────────────────────────────────────────
   const scrollTrackRef = useRef(null); // 350vh outer spacer (100vh hero + 250vh runway)
@@ -100,6 +103,7 @@ export default function HeroTransitionShell({
     overlayRef,
     nextSectionRef,
     onGlitterUpdate,
+    onBlackHoleUpdate,
   });
 
   // ── Merge static + live GlitterWrap props ────────────────────────────────

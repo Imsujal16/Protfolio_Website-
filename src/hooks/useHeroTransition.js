@@ -41,12 +41,15 @@
  * no scale, no momentum beat, no parallax.
  *
  * @param {Object}          params
- * @param {React.RefObject} params.scrollTrackRef   - tall outer div (100vh + 250vh = 350vh)
- * @param {React.RefObject} params.heroPinRef        - sticky 100vh panel (GSAP pins this)
- * @param {React.RefObject} params.heroContentRef    - wraps hero children — fades + lifts
- * @param {React.RefObject} params.overlayRef        - colour-bridge overlay
- * @param {React.RefObject} params.nextSectionRef    - the next section shell (rises in Stage D)
- * @param {Function}        params.onGlitterUpdate   - callback({brightness, glitterIntensity, trailAmount, speed})
+ * @param {React.RefObject} params.scrollTrackRef    - tall outer div (100vh + 250vh = 350vh)
+ * @param {React.RefObject} params.heroPinRef         - sticky 100vh panel (GSAP pins this)
+ * @param {React.RefObject} params.heroContentRef     - wraps hero children — fades + lifts
+ * @param {React.RefObject} params.overlayRef         - colour-bridge overlay
+ * @param {React.RefObject} params.nextSectionRef     - the next section shell (rises in Stage D)
+ * @param {Function}        params.onGlitterUpdate    - callback({brightness, glitterIntensity, trailAmount, speed})
+ * @param {Function}        [params.onBlackHoleUpdate] - optional callback({particleCount, orbitSpeed})
+ *                                                      Stage D pre-warms BlackHole for fast-scrollers.
+ *                                                      Primary BlackHole ramp is in useAboutScroll.
  */
 
 import { useEffect } from 'react';
@@ -149,6 +152,7 @@ export function useHeroTransition({
   overlayRef,
   nextSectionRef,
   onGlitterUpdate,
+  onBlackHoleUpdate,
 }) {
   useEffect(() => {
     const prefersReduced =
@@ -292,9 +296,9 @@ export function useHeroTransition({
 
         // ── Stage D: Next section resolves ────────────────────────────
         // rawP: STAGE_D_START → STAGE_D_END  (0.72 → 1.00)
-        // Colour-bridge overlay fades in. Next section shell rises.
-        // Easing: smoothstep for the overlay (even S-curve),
-        //         easeOutQuart for the next section (punchy rise, soft stop).
+        // Colour-bridge overlay fades in. About section shell rises.
+        // BlackHole pre-warmed here so fast-scrollers don't see it absent.
+        // Primary BlackHole ramp is in useAboutScroll (scroll-triggered).
         {
           const dP = rangeProgress(rawP, STAGE_D_START, STAGE_D_END);
           const overlayP = smoothstep(dP);
@@ -302,7 +306,7 @@ export function useHeroTransition({
             overlayRef.current.style.opacity = overlayP;
           }
 
-          // Next section shell: rises from 20px below to rest position.
+          // About section shell: rises from 20px below to rest position.
           if (nextSectionRef?.current) {
             const nextP     = easeOutQuart(dP);
             const nextY     = 20 * (1 - nextP); // 20px → 0px
@@ -311,6 +315,14 @@ export function useHeroTransition({
             nextSectionRef.current.style.transform =
               `translate3d(0, ${nextY.toFixed(2)}px, 0)`;
           }
+
+          // BlackHole pre-warm: ramp particleCount from 1 → ~200 over Stage D.
+          // This is a gentle seed so the disk is already forming before the
+          // user sees it. useAboutScroll owns the full ramp to BH_REST.
+          onBlackHoleUpdate?.({
+            particleCount: Math.round(lerp(1, 200, easeOutQuart(dP))),
+            orbitSpeed:    lerp(0, 1.5, dP), // slow initial orbit
+          });
         }
       },
 
@@ -331,6 +343,12 @@ export function useHeroTransition({
           trailAmount:      G_FLOOR.trailAmount,
           speed:            G_FLOOR.speed,
         });
+        // BlackHole pre-warm complete — leave at Stage D final values.
+        // useAboutScroll takes over from here.
+        onBlackHoleUpdate?.({
+          particleCount: 200,
+          orbitSpeed:    1.5,
+        });
       },
 
       onEnterBack() {
@@ -350,11 +368,16 @@ export function useHeroTransition({
           trailAmount:      G_IDLE.trailAmount,
           speed:            G_IDLE.speed,
         });
+        // Reset BlackHole to entry state — useAboutScroll re-ramps on scroll.
+        onBlackHoleUpdate?.({
+          particleCount: 1,
+          orbitSpeed:    0,
+        });
       },
     });
 
     return () => {
       st.kill();
     };
-  }, [scrollTrackRef, heroPinRef, heroContentRef, overlayRef, nextSectionRef, onGlitterUpdate]);
+  }, [scrollTrackRef, heroPinRef, heroContentRef, overlayRef, nextSectionRef, onGlitterUpdate, onBlackHoleUpdate]);
 }
