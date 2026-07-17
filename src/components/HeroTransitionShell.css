@@ -1,0 +1,112 @@
+/* ============================================================
+   HeroTransitionShell.css
+
+   Styling for the scroll-track container, the sticky hero pin,
+   the GlitterWrap canvas layer, and the colour-bridge overlay.
+
+   LAYOUT CONTRACT
+   ──────────────────────────────────────────────────────────
+   .hero-scroll-track           outer non-sticky container; 150vh tall
+     └── .hero-pin              position:sticky; 100vh tall — pinned by GSAP
+           ├── .glitter-layer   absolute fill; GlitterWrap canvas renders here
+           ├── .hero-content-wrap  fills the pin; wraps existing Hero children
+           │     (managed by useHeroTransition for fade + translateY)
+           └── .hero-transition-overlay  absolute fill; colour-bridge
+   ============================================================ */
+
+/* ── Outer scroll track ──────────────────────────────────── */
+/*
+ * 150vh = 100vh hero + 50vh of scroll room for the transition.
+ * Increase to "+=66%" or "+=75%" in the hook if you want a longer fade.
+ * The sticky child fills the first 100vh — the remaining 50vh are the
+ * zone during which the hero is pinned and dims.
+ */
+.hero-scroll-track {
+  position: relative;
+  /* height is set inline by the component to (100vh + scrub zone) */
+  width: 100%;
+  /* Keep this out of stacking context so the Navbar z-index still wins */
+}
+
+/* ── Sticky pin — the hero panel itself ──────────────────── */
+/*
+ * position:sticky + top:0 means the browser holds this fixed while
+ * .hero-scroll-track scrolls past it. GSAP's ScrollTrigger.pin also
+ * applies position:fixed for the duration — that's fine; we set
+ * pinSpacing:false because the track already has explicit height.
+ */
+.hero-pin {
+  position: sticky;
+  top: 0;
+  width: 100%;
+  height: 100vh;
+  overflow: hidden;
+  /* Ensure stacking context for overlay / canvas layers */
+  isolation: isolate;
+}
+
+/* ── GlitterWrap canvas layer ────────────────────────────── */
+/*
+ * Sits BEHIND the hero content (z-index: 0) so particles show through
+ * any transparent areas of MaskReveal / the side panels.
+ * The canvas itself is 100%×100% inside GlitterWrap's container.
+ */
+.glitter-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  /* GlitterWrap will fill this with its canvas */
+}
+
+/* ── Hero content wrapper ────────────────────────────────── */
+/*
+ * Wraps ALL existing hero children (DesignerPanel, MaskReveal, CoderPanel).
+ * useHeroTransition mutates .style.opacity and .style.transform on this node.
+ * No layout properties are animated — only composited properties.
+ */
+.hero-content-wrap {
+  position: absolute;
+  inset: 0;
+  z-index: 1; /* above .glitter-layer */
+  will-change: transform, opacity;
+  /* GPU-hint: pre-promote so the first scrub frame doesn't stutter */
+  transform: translate3d(0, 0, 0);
+}
+
+/* ── Colour-bridge overlay ───────────────────────────────── */
+/*
+ * Fades from transparent (opacity:0) to opaque (opacity:1) as scroll
+ * progresses. Its background colour is the DESTINATION — the first section
+ * after Hero. This makes the Hero appear to "dissolve into" the next page.
+ *
+ * TUNING: change background here to alter the landing colour.
+ * Current value matches var(--paper) = #ffffff from NarrativeSections.css,
+ * which transitions naturally from the MaskReveal white hero background.
+ *
+ * If your next section is dark, change this to e.g. #161719 (var(--ink)).
+ */
+.hero-transition-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2; /* above .hero-content-wrap so it masks everything */
+  pointer-events: none;
+  opacity: 0;
+  will-change: opacity;
+  /* White → matches MaskReveal and NarrativeSections --paper */
+  background: #ffffff;
+}
+
+/* ── Reduced motion ──────────────────────────────────────── */
+/*
+ * When the user has requested reduced motion, disable all transitions
+ * on the animated elements. The hook already skips the ScrollTrigger,
+ * so this just ensures CSS transitions don't sneak in.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .hero-content-wrap,
+  .hero-transition-overlay {
+    transition: none !important;
+    animation: none !important;
+  }
+}
