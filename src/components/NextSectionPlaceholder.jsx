@@ -1,34 +1,30 @@
 /**
- * NextSectionPlaceholder.jsx
+ * NextSectionPlaceholder.jsx — v2
  *
- * Bare-minimum placeholder for the section that follows the Hero.
- * Purpose: give HeroTransitionShell's colour-bridge overlay something
- * to hand off to — the transition needs a real element at the correct
- * scroll position to land on.
+ * Now uses forwardRef so HeroTransitionShell can pass a ref to the hook,
+ * allowing Stage D to animate this shell rising into view (opacity + translateY).
  *
- * WHAT GOES HERE LATER
- * ─────────────────────────────────────────────────────────────────────────
- * Replace this component with your actual next section (e.g. <NarrativeSections />)
- * when that content is ready. The transition system doesn't care what's inside —
- * it only cares that something sits below the HeroTransitionShell in the DOM.
+ * Initial state: opacity:0, translateY:20px — set in CSS.
+ * The hook will animate to opacity:1, translateY:0 during Stage D.
  *
- * BACKGROUND COLOUR
- * ─────────────────────────────────────────────────────────────────────────
- * Set to #ffffff (var(--paper)) — matching both the Hero (MaskReveal white)
- * and NarrativeSections.css, so the colour-bridge overlay is seamless.
- * If your actual next section is dark, change this AND the
- * .hero-transition-overlay background in HeroTransitionShell.css to match.
+ * Replace this component with <NarrativeSections /> (or whatever comes next)
+ * when content is ready. The receiving component must also forwardRef if you
+ * want Stage D to animate it — or wrap it in a div and pass the ref to that.
  */
 
+import { forwardRef } from 'react';
 import './NextSectionPlaceholder.css';
 
-export default function NextSectionPlaceholder() {
+const NextSectionPlaceholder = forwardRef(function NextSectionPlaceholder(props, ref) {
   return (
     <section
+      ref={ref}
       className="next-section-placeholder"
       aria-label="Next section — content coming soon"
     >
-      {/* Empty intentionally. Add content here when the About section is built. */}
+      {/* Empty intentionally. Add content when the About section is built. */}
     </section>
   );
-}
+});
+
+export default NextSectionPlaceholder;

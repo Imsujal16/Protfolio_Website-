@@ -1,27 +1,22 @@
 /* ============================================================
-   NextSectionPlaceholder.css
+   NextSectionPlaceholder.css — v2
 
-   Bare placeholder styles. The section needs enough height to
-   sit visibly below the Hero after the transition completes.
+   Initial state: opacity 0, shifted down 20px.
+   Stage D in useHeroTransition animates to opacity:1, translateY:0.
 
-   TUNING
-   ──────────────────────────────────────────────────────────
-   - background: matches var(--paper) = #ffffff and the
-     .hero-transition-overlay colour in HeroTransitionShell.css.
-     Change both if your next section is dark.
-   - min-height: 100vh ensures the user can scroll fully past
-     the Hero sticky zone and land somewhere visible.
+   Background matches var(--paper) = #ffffff and the
+   .hero-transition-overlay colour in HeroTransitionShell.css.
    ============================================================ */
 
 .next-section-placeholder {
-  /* Match the Hero and NarrativeSections --paper colour */
   background: #ffffff;
-
-  /* Enough room to scroll into after the transition completes */
   min-height: 100vh;
   width: 100%;
-
-  /* Prevent any inherited margins from creating gaps */
   margin: 0;
   padding: 0;
+
+  /* Stage D initial state — hook overrides these via .style */
+  opacity: 0;
+  transform: translate3d(0, 20px, 0);
+  will-change: transform, opacity;
 }
