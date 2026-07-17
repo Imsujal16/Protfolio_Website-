@@ -1,146 +1,288 @@
-import { useRef, useEffect, useCallback } from 'react';
+﻿import { useRef, useEffect, useCallback } from 'react';
 import frontImg from '../assets/front.png';
 import backImg from '../assets/back.png';
 
 /**
- * MaskReveal
+ * MaskReveal — Awwwards-grade fluid mask reveal.
  *
- * Full-screen two-image fluid mask reveal.
- *   front.png → base layer (always visible)
- *   back.png  → top layer  (revealed through a physics-eased radial mask)
+ * Physics architecture (pure RAF, zero new dependencies):
+ *   - Triple exponential lerp: position (heavy) + radius (lighter) + tilt (laziest)
+ *   - Velocity tracking → reactive radius bonus ("momentum bloom")
+ *   - 3D parallax tilt via perspective transform on the wrapper
+ *   - SVG gooey filter (feGaussianBlur + feColorMatrix) on the mask layer
+ *     → turns the crisp circle edge into a liquid, organic blob
+ *   - Multi-stop radial gradient with a soft rim glow ring
  *
- * Physics: exponential lerp via requestAnimationFrame.
- * Tuned to feel heavy and fluid ("3D glide").
+ * BOUNDARY RULE: layout, grid, objectFit, objectPosition are untouched.
  */
-export default function MaskReveal() {
-  const containerRef  = useRef(null);
-  const backLayerRef  = useRef(null);
 
-  // Mutable physics state — intentionally NOT React state (no re-renders in RAF)
-  const physics = useRef({
-    tx: 0, ty: 0,          // cursor target
-    cx: 0, cy: 0,          // current eased position
+const LERP_POS      = 0.055;   // heavy, slow-starting cursor trail ("liquid mass")
+const LERP_RADIUS   = 0.072;   // slightly faster — blob breathes before it glides
+const LERP_TILT     = 0.040;   // slowest — parallax plane pivots lazily
+const LERP_VEL      = 0.18;    // velocity smoothing (fast for responsiveness)
+const MAX_VEL_BONUS = 90;      // max extra radius px when cursor is flying
+const BASE_RADIUS   = 240;     // resting reveal size (px)
+const TILT_STRENGTH = 8;       // max degrees of 3D tilt
+
+export default function MaskReveal() {
+  const containerRef = useRef(null);
+  const backLayerRef = useRef(null);
+  const physicsRef   = useRef({
+    tx: 0, ty: 0,
+    cx: 0, cy: 0,
+    ttX: 0, ttY: 0,
+    ctX: 0, ctY: 0,
+    vx: 0, vy: 0,
+    prevTx: 0, prevTy: 0,
     targetRadius: 0,
     currentRadius: 0,
+    inside: false,
     rafId: null,
   });
 
-  // Lower = heavier inertia. 0.065 gives a satisfying "3D glide" feel.
-  const LERP_POS    = 0.065;
-  const LERP_RADIUS = 0.08;
-
-  /* ── RAF tick ──────────────────────────────────────────────────────────── */
+  /* ── RAF tick ─────────────────────────────────────────────── */
   const tick = useCallback(() => {
-    const p  = physics.current;
+    const s  = physicsRef.current;
     const el = backLayerRef.current;
-    if (!el) { p.rafId = requestAnimationFrame(tick); return; }
+    const ct = containerRef.current;
 
-    p.cx            += (p.tx - p.cx)                       * LERP_POS;
-    p.cy            += (p.ty - p.cy)                       * LERP_POS;
-    p.currentRadius += (p.targetRadius - p.currentRadius)  * LERP_RADIUS;
+    // 1. Position lerp
+    s.cx += (s.tx - s.cx) * LERP_POS;
+    s.cy += (s.ty - s.cy) * LERP_POS;
 
-    const r = p.currentRadius;
+    // 2. Velocity estimation (smoothed delta of target, not current)
+    const rawVx = s.tx - s.prevTx;
+    const rawVy = s.ty - s.prevTy;
+    s.vx += (rawVx - s.vx) * LERP_VEL;
+    s.vy += (rawVy - s.vy) * LERP_VEL;
+    s.prevTx = s.tx;
+    s.prevTy = s.ty;
+    const speed = Math.sqrt(s.vx * s.vx + s.vy * s.vy);
 
-    if (r < 0.5) {
-      el.style.webkitMaskImage = 'none';
-      el.style.maskImage       = 'none';
-    } else {
-      const mask = `radial-gradient(circle ${r}px at ${p.cx}px ${p.cy}px, black 80%, transparent 100%)`;
-      el.style.webkitMaskImage = mask;
-      el.style.maskImage       = mask;
+    // 3. Radius: base + velocity bloom, or 0 when cursor left
+    const velBonus    = s.inside ? Math.min(speed * 3.2, MAX_VEL_BONUS) : 0;
+    s.targetRadius    = s.inside ? BASE_RADIUS + velBonus : 0;
+    s.currentRadius  += (s.targetRadius - s.currentRadius) * LERP_RADIUS;
+
+    // 4. Build multi-stop gooey mask
+    if (el) {
+      const r = s.currentRadius;
+      if (r < 0.5) {
+        el.style.webkitMaskImage = 'none';
+        el.style.maskImage       = 'none';
+      } else {
+        const mask = [
+          `radial-gradient(circle ${r}px at ${s.cx}px ${s.cy}px,`,
+          `  black 0%,`,
+          `  black 72%,`,
+          `  rgba(0,0,0,0.85) 80%,`,
+          `  rgba(0,0,0,0.4) 88%,`,
+          `  rgba(0,0,0,0.12) 93%,`,
+          `  transparent 100%`,
+          `)`,
+        ].join(' ');
+        el.style.webkitMaskImage = mask;
+        el.style.maskImage       = mask;
+      }
     }
 
-    p.rafId = requestAnimationFrame(tick);
+    // 5. 3D parallax tilt — normalised from screen centre
+    if (ct) {
+      const rect = ct.getBoundingClientRect();
+      const nx = (s.cx / rect.width  - 0.5) * 2;
+      const ny = (s.cy / rect.height - 0.5) * 2;
+      s.ttX = s.inside ?  ny * -TILT_STRENGTH : 0;
+      s.ttY = s.inside ?  nx *  TILT_STRENGTH : 0;
+      s.ctX += (s.ttX - s.ctX) * LERP_TILT;
+      s.ctY += (s.ttY - s.ctY) * LERP_TILT;
+      ct.style.transform =
+        `perspective(1200px) rotateX(${s.ctX.toFixed(3)}deg) rotateY(${s.ctY.toFixed(3)}deg)`;
+    }
+
+    s.rafId = requestAnimationFrame(tick);
   }, []);
 
-  /* ── Start / stop loop ─────────────────────────────────────────────────── */
+  /* ── Loop lifecycle ───────────────────────────────────────── */
   useEffect(() => {
-    physics.current.rafId = requestAnimationFrame(tick);
+    physicsRef.current.rafId = requestAnimationFrame(tick);
     return () => {
-      if (physics.current.rafId) cancelAnimationFrame(physics.current.rafId);
+      if (physicsRef.current.rafId) cancelAnimationFrame(physicsRef.current.rafId);
     };
   }, [tick]);
 
-  /* ── Pointer handlers ──────────────────────────────────────────────────── */
+  /* ── Pointer handlers ─────────────────────────────────────── */
   const handleMouseEnter = useCallback((e) => {
     const rect = containerRef.current?.getBoundingClientRect();
     if (!rect) return;
-    // Seed position to avoid the mask flying in from (0,0)
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-    physics.current.cx = x;
-    physics.current.cy = y;
-    physics.current.tx = x;
-    physics.current.ty = y;
-    physics.current.targetRadius = 250;
+    const s = physicsRef.current;
+    s.cx = x; s.cy = y;
+    s.tx = x; s.ty = y;
+    s.prevTx = x; s.prevTy = y;
+    s.vx = 0; s.vy = 0;
+    s.inside = true;
   }, []);
 
   const handleMouseMove = useCallback((e) => {
     const rect = containerRef.current?.getBoundingClientRect();
     if (!rect) return;
-    physics.current.tx = e.clientX - rect.left;
-    physics.current.ty = e.clientY - rect.top;
-    physics.current.targetRadius = 250;
+    physicsRef.current.tx     = e.clientX - rect.left;
+    physicsRef.current.ty     = e.clientY - rect.top;
+    physicsRef.current.inside = true;
   }, []);
 
   const handleMouseLeave = useCallback(() => {
-    physics.current.targetRadius = 0;
+    physicsRef.current.inside = false;
   }, []);
 
-  /* ── Render ────────────────────────────────────────────────────────────── */
+  /* ── Render ───────────────────────────────────────────────── */
+  return (
+    <>
+      {/* SVG Gooey filter */}
+      <svg
+        aria-hidden="true"
+        style={{ position: 'absolute', width: 0, height: 0, overflow: 'hidden' }}
+      >
+        <defs>
+          <filter
+            id="mask-gooey"
+            x="-30%" y="-30%" width="160%" height="160%"
+            colorInterpolationFilters="sRGB"
+          >
+            <feGaussianBlur in="SourceGraphic" stdDeviation="14" result="blur" />
+            <feColorMatrix
+              in="blur"
+              type="matrix"
+              values="1 0 0 0 0   0 1 0 0 0   0 0 1 0 0   0 0 0 18 -7"
+              result="goo"
+            />
+            <feComposite in="SourceGraphic" in2="goo" operator="atop" />
+          </filter>
+        </defs>
+      </svg>
+
+      {/* Main container — receives 3D tilt each RAF frame */}
+      <div
+        ref={containerRef}
+        onMouseEnter={handleMouseEnter}
+        onMouseMove={handleMouseMove}
+        onMouseLeave={handleMouseLeave}
+        style={{
+          position:        'relative',
+          width:           '100vw',
+          height:          '100vh',
+          overflow:        'hidden',
+          background:      '#ffffff',
+          cursor:          'crosshair',
+          transform:       'perspective(1200px) rotateX(0deg) rotateY(0deg)',
+          transformOrigin: '50% 50%',
+          willChange:      'transform',
+        }}
+      >
+        {/* Base layer — front.png */}
+        <img
+          src={frontImg}
+          alt=""
+          draggable={false}
+          style={{
+            position:       'absolute',
+            inset:          0,
+            width:          '100%',
+            height:         '100%',
+            objectFit:      'cover',
+            objectPosition: 'center center',
+            zIndex:         0,
+            userSelect:     'none',
+            pointerEvents:  'none',
+          }}
+        />
+
+        {/* Top layer — back.png, revealed by the physics mask + gooey filter */}
+        <img
+          ref={backLayerRef}
+          src={backImg}
+          alt=""
+          draggable={false}
+          style={{
+            position:           'absolute',
+            inset:              0,
+            width:              '100%',
+            height:             '100%',
+            objectFit:          'cover',
+            objectPosition:     'center center',
+            zIndex:             10,
+            userSelect:         'none',
+            pointerEvents:      'none',
+            WebkitMaskImage:    'none',
+            maskImage:          'none',
+            filter:             'url(#mask-gooey)',
+            willChange:         'mask-image',
+          }}
+        />
+
+        {/* Rim glow — trails the blob at its edge, screen-blended */}
+        <RimGlow physicsRef={physicsRef} />
+      </div>
+    </>
+  );
+}
+
+/* ── Rim Glow ─────────────────────────────────────────────────
+ * Reads the same physics ref as MaskReveal.
+ * Renders a creamy radial-gradient halo at the blob boundary.
+ * mixBlendMode: screen ensures it brightens without tinting.
+ */
+function RimGlow({ physicsRef }) {
+  const glowRef = useRef(null);
+
+  useEffect(() => {
+    let rafId;
+    function tick() {
+      const el = glowRef.current;
+      const s  = physicsRef.current;
+      if (el) {
+        const r    = s.currentRadius;
+        const fade = Math.min(r / BASE_RADIUS, 1);
+        if (r < 1) {
+          el.style.opacity = '0';
+        } else {
+          const inner = Math.max(r - 44, 0);
+          const outer = r + 28;
+          const pInner = ((inner / outer) * 100).toFixed(1);
+          const pMid   = ((r / outer) * 100).toFixed(1);
+          const pOuter = (((r + 14) / outer) * 100).toFixed(1);
+          el.style.background = [
+            `radial-gradient(circle ${outer}px at ${s.cx}px ${s.cy}px,`,
+            `  transparent ${pInner}%,`,
+            `  hsla(30,100%,96%,${(0.28 * fade).toFixed(3)}) ${pMid}%,`,
+            `  hsla(20,80%,90%,${(0.10 * fade).toFixed(3)}) ${pOuter}%,`,
+            `  transparent 100%`,
+            `)`,
+          ].join(' ');
+          el.style.opacity = '1';
+        }
+      }
+      rafId = requestAnimationFrame(tick);
+    }
+    rafId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafId);
+  }, [physicsRef]);
+
   return (
     <div
-      ref={containerRef}
-      onMouseEnter={handleMouseEnter}
-      onMouseMove={handleMouseMove}
-      onMouseLeave={handleMouseLeave}
+      ref={glowRef}
+      aria-hidden="true"
       style={{
-        position: 'relative',
-        width:    '100vw',
-        height:   '100vh',
-        overflow: 'hidden',
-        background: '#ffffff',
-        cursor: 'crosshair',
+        position:      'absolute',
+        inset:         0,
+        zIndex:        11,
+        pointerEvents: 'none',
+        userSelect:    'none',
+        mixBlendMode:  'screen',
+        opacity:       0,
+        willChange:    'background, opacity',
       }}
-    >
-      {/* Base layer — front.png */}
-      <img
-        src={frontImg}
-        alt=""
-        draggable={false}
-        style={{
-          position:       'absolute',
-          inset:          0,
-          width:          '100%',
-          height:         '100%',
-          objectFit:      'cover',
-          objectPosition: 'center center',
-          zIndex:         0,
-          userSelect:     'none',
-          pointerEvents:  'none',
-        }}
-      />
-
-      {/* Top layer — back.png, revealed by the physics mask */}
-      <img
-        ref={backLayerRef}
-        src={backImg}
-        alt=""
-        draggable={false}
-        style={{
-          position:           'absolute',
-          inset:              0,
-          width:              '100%',
-          height:             '100%',
-          objectFit:          'cover',
-          objectPosition:     'center center',
-          zIndex:             10,
-          userSelect:         'none',
-          pointerEvents:      'none',
-          WebkitMaskImage:    'none',
-          maskImage:          'none',
-        }}
-      />
-    </div>
+    />
   );
 }
