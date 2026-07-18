@@ -1,4 +1,4 @@
-﻿import { useRef, useEffect, useCallback } from 'react';
+import { useRef, useEffect, useCallback } from 'react';
 import frontImg from '../assets/front.png';
 import backImg from '../assets/back.png';
 
@@ -86,18 +86,8 @@ export default function MaskReveal() {
       }
     }
 
-    // 5. 3D parallax tilt — normalised from screen centre
-    if (ct) {
-      const rect = ct.getBoundingClientRect();
-      const nx = (s.cx / rect.width  - 0.5) * 2;
-      const ny = (s.cy / rect.height - 0.5) * 2;
-      s.ttX = s.inside ?  ny * -TILT_STRENGTH : 0;
-      s.ttY = s.inside ?  nx *  TILT_STRENGTH : 0;
-      s.ctX += (s.ttX - s.ctX) * LERP_TILT;
-      s.ctY += (s.ttY - s.ctY) * LERP_TILT;
-      ct.style.transform =
-        `perspective(1200px) rotateX(${s.ctX.toFixed(3)}deg) rotateY(${s.ctY.toFixed(3)}deg)`;
-    }
+    // 5. 3D parallax tilt — removed to disable the floating effect
+    // (Intentionally left blank so cursor-driven parallax tilt doesn't apply)
 
     s.rafId = requestAnimationFrame(tick);
   }, []);
@@ -175,9 +165,6 @@ export default function MaskReveal() {
           overflow:        'hidden',
           background:      '#ffffff',
           cursor:          'crosshair',
-          transform:       'perspective(1200px) rotateX(0deg) rotateY(0deg)',
-          transformOrigin: '50% 50%',
-          willChange:      'transform',
         }}
       >
         {/* Base layer — front.png */}
