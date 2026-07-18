@@ -1,0 +1,32 @@
+/* ============================================================
+   HeroTransition.css
+   
+   The .ht-panel is the full-width wrapper that "slides up"
+   over the sticky hero via a GSAP-driven clip-path wipe.
+   
+   clip-path: inset(100% 0 0 0) → inset(0% 0 0 0)
+   
+   Starting state (set by GSAP gsap.set() before the animation):
+   100% bottom inset = fully hidden below its own top edge.
+   As scroll progresses, inset collapses to 0 — panel fully visible.
+   
+   Performance:
+   - clip-path is GPU-composited in all modern browsers.
+   - No layout-triggering properties are touched.
+   - will-change: clip-path hints the compositor to promote the layer.
+   ============================================================ */
+
+.ht-panel {
+  position: relative;
+  z-index: 10;
+  width: 100%;
+
+  /* Initial state — GSAP overrides this with gsap.set() */
+  clip-path: inset(100% 0 0 0);
+  will-change: clip-path;
+
+  /* FIX Hero background: was #0e0e0e (dark) which bled through the clip-path
+     animation edges since AboutSection is #ffffff. Changed to #ffffff so the
+     panel background matches its content at all scroll positions. */
+  background: #ffffff;
+}

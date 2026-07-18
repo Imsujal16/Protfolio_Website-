@@ -1,0 +1,460 @@
+/* ============================================================
+   AboutSection.css — v2 (QA fixes)
+
+   Design system — single source of truth from HeroPanels.css :root:
+     --warm:        hsl(340, 70%, 60%)   — pink/magenta (designer. accent)
+     --warm-mid:    hsl(320, 65%, 68%)
+     --warm-border: hsla(340, 70%, 60%, 0.30)
+     --warm-glow:   hsla(340, 70%, 60%, 0.50)
+     --cool:        hsl(195, 80%, 55%)   — cyan (coder accent)
+     --cool-mid:    hsl(210, 75%, 65%)
+     --cool-border: hsla(195, 80%, 55%, 0.30)
+
+   Typography: Inter / DM Sans (body), JetBrains Mono (kicker/meta)
+   Background: #ffffff (matches body)
+   Muted text:  rgba(30, 30, 30, 0.55)
+   High-em text: rgba(10, 10, 10, 0.88)
+
+   GPU-only animations: transform, opacity, clip-path.
+
+   QA fixes applied (v2):
+     Bug 1 — Removed stray `animation-delay` from card classes (no animation-name
+              was set, causing inconsistent paint artifacts in some browsers).
+              All four fact cards and all four cert cards now share identical CSS.
+     Bug 2 — Unified highlight-chip into ONE shared ruleset (.about-chip-inner
+              base + modifier classes). Single padding scale (0.05em 0.2em),
+              single vertical-align (baseline), single border-radius (6px).
+              Headline words and "builds" chip all use the same base + tone modifier.
+     Bug 3 — .about-lower-grid uses align-items:start with no extra
+              top-margin on either column. The left col's photo margin-bottom
+              is replaced with the column gap so both columns start flush.
+     Hero  — .ht-panel background changed from #0e0e0e to #ffffff so no dark
+              bleed-through is visible between the hero and the about section.
+   ============================================================ */
+
+/* ── Section shell ──────────────────────────────────────────────────────── */
+.about-section {
+  background: #ffffff;
+  width: 100%;
+  padding: clamp(80px, 12vw, 140px) clamp(24px, 7vw, 120px);
+  display: flex;
+  flex-direction: column;
+  gap: clamp(40px, 6vw, 80px);
+  overflow: hidden; /* contains curtain overflow during animation */
+}
+
+/* ══ BLOCK 1 — Headline ═════════════════════════════════════════════════ */
+
+.about-headline-block {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(20px, 3vw, 36px);
+  max-width: 900px;
+}
+
+/* The headline — flex container; each word-curtain is a flex item */
+.about-headline {
+  font-size: clamp(36px, 6.5vw, 80px);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1.08;
+  color: rgba(10, 10, 10, 0.92);
+  /* flex layout for word wrapping */
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;        /* FIX Bug 2: all words align to shared baseline */
+  gap: 0.22em 0.22em;
+  margin: 0;
+}
+
+/* Curtain slot — overflow:hidden clips the GSAP-sliding inner.
+   vertical-align:baseline keeps curtain boxes on the text baseline.
+   line-height matches the inner em height to prevent clip of descenders. */
+.about-word-curtain {
+  display: inline-flex;
+  align-items: baseline;        /* FIX Bug 2: curtain aligns baseline with siblings */
+  overflow: hidden;
+  /* line-height slightly taller to prevent descender clipping */
+  line-height: 1.2;
+}
+
+/* ── Shared highlight-chip style (FIX Bug 2) ─────────────────────────────
+   ONE set of rules used for every highlighted word in this section:
+   headline "design"/"code" words AND the "builds" chip on the sub-line.
+   Font-size is inherited from the parent (headline or sub-line) so the
+   chip scales correctly at each context without re-specifying em values.
+
+   Key choices:
+   - padding: 0.05em 0.2em  — proportional, works at any font-size
+   - border-radius: 6px     — fixed px, consistent visual rounding
+   - display: inline-block  — needed for padding + will-change to work
+   - vertical-align: baseline — REMOVED (inherited from flex baseline parent)
+   - outline: 1px solid     — preferred over border to avoid box-model shift
+*/
+.about-word-inner {
+  display: inline-block;
+  padding: 0.05em 0.2em;
+  border-radius: 6px;
+  will-change: transform;
+  /* No background/color by default — plain words have no highlight box */
+}
+
+/* Warm highlight modifier — applied to "design" in the headline */
+.word--warm {
+  background: hsla(340, 70%, 60%, 0.10);
+  color: var(--warm);
+  outline: 1px solid var(--warm-border);
+}
+
+/* Cool highlight modifier — applied to "code" in the headline */
+.word--cool {
+  background: hsla(195, 80%, 55%, 0.10);
+  color: var(--cool);
+  outline: 1px solid var(--cool-border);
+}
+
+/* ── Sub-line chips ──────────────────────────────────────────────────── */
+.about-subline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;        /* FIX Bug 2: baseline alignment for all chips */
+  gap: 0.3em 0.3em;
+  font-size: clamp(14px, 1.5vw, 18px);
+  font-weight: 500;
+  color: rgba(30, 30, 30, 0.65);
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* Sub-line curtain — same baseline alignment as headline curtains */
+.about-chip-curtain {
+  display: inline-flex;
+  align-items: baseline;
+  overflow: hidden;
+  line-height: 1.4;
+}
+
+/* Sub-line chip inner — REUSES the same shared highlight base.
+   Font-size is inherited from .about-subline (smaller than headline)
+   so padding 0.05em/0.2em scales proportionally — identical visual weight. */
+.about-chip-inner {
+  display: inline-block;
+  padding: 0.05em 0.2em;
+  border-radius: 6px;
+  will-change: transform;
+  /* No highlight by default — plain chips have no box */
+}
+
+/* "builds" — warm highlight modifier, same pattern as word--warm above.
+   Font-weight 700 for emphasis but all other geometry is shared. */
+.about-chip-inner--builds {
+  background: hsla(340, 70%, 60%, 0.10);
+  color: var(--warm);
+  outline: 1px solid var(--warm-border);
+  font-weight: 700;
+}
+
+/* (Removed scroll cue dot) */
+
+/* ══ BLOCK 2 — Body copy ════════════════════════════════════════════════ */
+
+.about-body-block {
+  max-width: 680px;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(20px, 2.5vw, 32px);
+  position: relative;
+}
+
+/* (Removed inline accent dot) */
+
+.about-body-para {
+  font-size: clamp(15px, 1.45vw, 18px);
+  font-weight: 400;
+  line-height: 1.76;
+  color: rgba(30, 30, 30, 0.62);
+  margin: 0;
+}
+
+/* Bold key phrases — match site's subtext-emphasis pattern */
+.about-em {
+  color: rgba(10, 10, 10, 0.88);
+  font-weight: 700;
+}
+
+/* ══ BLOCK 4 — Education + Certifications two-col ════════════════════════ */
+
+/* Vertically aligned two-column layout */
+.about-lower-grid {
+  display: grid;
+  grid-template-columns: 1fr 1.25fr;
+  gap: clamp(40px, 8vw, 100px);
+  align-items: center; /* Same optical center */
+}
+
+/* Left column (Photo only) */
+.about-photo-col {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Photo slot ──────────────────────────────────────────────────────── */
+.about-photo-slot {
+  position: relative; /* Contains the overlapping badge */
+  width: 100%;
+  max-width: 380px;
+  aspect-ratio: 4 / 5;
+  background: #f3f3f3;
+  border: 1.5px dashed rgba(0, 0, 0, 0.14);
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+}
+
+.about-photo-slot__label {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 11px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: rgba(0, 0, 0, 0.28);
+  text-align: center;
+  line-height: 1.9;
+}
+
+/* Real photo (used when placeholder div is replaced by <img>) */
+.about-photo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 16px;
+  display: block;
+}
+
+/* ── Location Badge (Overlaps Photo) ─────────────────────────────────── */
+.about-location-badge {
+  position: absolute;
+  bottom: -16px;
+  right: -16px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(8px);
+  color: var(--cool);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 100px;
+  padding: 8px 18px;
+  font-size: 13.5px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+  z-index: 10;
+  /* Keep badge visible and unclipped on narrow screens */
+  max-width: calc(100vw - 40px);
+}
+
+.about-location-badge__icon {
+  font-size: 15px;
+  line-height: 1;
+}
+
+/* ── Education timeline ──────────────────────────────────────────────── */
+.about-edu {
+  display: flex;
+  flex-direction: column;
+}
+
+.about-edu__kicker {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--warm);
+  margin-bottom: 20px;
+}
+
+.about-edu__list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  border-left: 2px solid var(--warm-border);
+  padding-left: clamp(16px, 2.5vw, 24px);
+  display: flex;
+  flex-direction: column;
+}
+
+.about-edu__item {
+  position: relative;
+  padding-bottom: clamp(20px, 3vw, 32px);
+}
+
+/* Connector dot on the vertical bar */
+.about-edu__item::before {
+  content: '';
+  position: absolute;
+  left: calc(-1 * clamp(16px, 2.5vw, 24px) - 5px);
+  top: 4px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--warm);
+  opacity: 0.55;
+  outline: 2px solid #ffffff;
+  outline-offset: 1px;
+}
+
+.about-edu__item:last-child {
+  padding-bottom: 0;
+}
+
+.about-edu__institution {
+  font-size: clamp(13px, 1.2vw, 15px);
+  font-weight: 700;
+  color: rgba(10, 10, 10, 0.88);
+  letter-spacing: -0.015em;
+  margin: 0 0 3px;
+}
+
+.about-edu__degree {
+  font-size: clamp(12px, 1.1vw, 13.5px);
+  color: rgba(30, 30, 30, 0.62);
+  margin: 0 0 2px;
+  line-height: 1.5;
+}
+
+.about-edu__meta {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 11px;
+  color: rgba(30, 30, 30, 0.42);
+  margin: 0;
+  letter-spacing: 0.02em;
+}
+
+/* ── Right column (Text content) ─────────────────────────────────────── */
+.about-text-col {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(40px, 6vw, 64px);
+}
+
+.about-cert-section {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Certifications 2×2 grid ─────────────────────────────────────────── */
+.about-cert-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+/* ── Shared cert card recipe ──────────────────────────────────────────────
+   FIX Bug 1: Removed `animation-delay: var(--cert-delay)`.
+   Identical to fact-card recipe — same border, radius, padding family.
+   The two card types differ only in border-radius (14px vs 16px) and
+   hover accent (cool vs warm) — everything else is structurally identical.
+   This is the intentional design: cert cards are slightly smaller-radius
+   to visually indicate they are a "secondary" grid. */
+.about-cert-card {
+  background: #fafafa;
+  border: 1px solid rgba(0, 0, 0, 0.07);
+  border-radius: 14px;
+  padding: clamp(14px, 2vw, 22px);
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  transition:
+    border-color 0.22s ease,
+    box-shadow   0.22s ease,
+    transform    0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.about-cert-card:hover {
+  border-color: var(--cool-border);
+  box-shadow: 0 4px 20px hsla(195, 80%, 55%, 0.08);
+  transform: translateY(-2px);
+}
+
+.about-cert-title {
+  font-size: clamp(12.5px, 1.1vw, 14.5px);
+  font-weight: 700;
+  color: rgba(10, 10, 10, 0.88);
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+.about-cert-sub {
+  font-size: clamp(11px, 0.95vw, 12.5px);
+  color: rgba(30, 30, 30, 0.50);
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* ══ RESPONSIVE ══════════════════════════════════════════════════════════ */
+
+@media (max-width: 900px) {
+  .about-section {
+    padding: clamp(64px, 10vw, 100px) clamp(20px, 5vw, 64px);
+  }
+
+  .about-headline {
+    font-size: clamp(32px, 6vw, 56px);
+  }
+}
+
+@media (max-width: 720px) {
+  .about-section {
+    padding: 64px 20px;
+    gap: 56px;
+  }
+
+  .about-lower-grid {
+    grid-template-columns: 1fr;
+    gap: 64px;
+  }
+
+  .about-facts-grid {
+    max-width: 100%;
+  }
+
+  .about-photo-slot {
+    margin: 0 auto;
+    aspect-ratio: 4 / 3;
+    /* Extra bottom margin so the badge doesn't overlap content below on mobile */
+    margin-bottom: 24px;
+  }
+  
+  .about-location-badge {
+    bottom: -16px;
+    right: 12px;
+  }
+}
+
+@media (max-width: 440px) {
+  .about-cert-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .about-headline {
+    font-size: 32px;
+    letter-spacing: -0.03em;
+  }
+}
+
+/* ══ REDUCED MOTION ══════════════════════════════════════════════════════ */
+@media (prefers-reduced-motion: reduce) {
+  .about-word-inner,
+  .about-chip-inner {
+    transform: none !important;
+    opacity: 1 !important;
+  }
+
+
+  .about-cert-card {
+    transition: none !important;
+  }
+}

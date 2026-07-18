@@ -1,6 +1,18 @@
-import { useEffect, useRef } from 'react';
+/**
+ * NarrativeSections.jsx
+ *
+ * Contains: Projects, Skills, Experience, Contact sections.
+ * The About section has been extracted to AboutSection.jsx.
+ *
+ * Each section uses the shared useSectionReveal() hook via .js-reveal
+ * class selectors — so swapping reveal variant is a one-line change.
+ * Study-image parallax is preserved as a separate scrubbed ScrollTrigger
+ * since it's a continuous effect, not a one-shot reveal.
+ */
+import { useEffect } from 'react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { useSectionReveal } from '../hooks/useSectionReveal';
 import studyImage from '../assets/3.png';
 import maskedPortrait from '../assets/back1.png';
 import portraitImage from '../assets/front.png';
@@ -55,27 +67,22 @@ function SectionIntro({ children, className = '' }) {
 }
 
 export default function NarrativeSections() {
-  const rootRef = useRef(null);
+  // Shared reveal: fade-rise on all .js-reveal elements across all child sections
+  const rootRef = useSectionReveal('.js-reveal', {
+    variant: 'fade-rise',
+    stagger: 0.11,
+    start: 'top 84%',
+    duration: 0.9,
+    ease: 'power3.out',
+  });
 
+  // Study image parallax — separate scrubbed effect (continuous, not one-shot)
+  // useSectionReveal handles all .js-reveal fade-rise; this is the parallax-only effect.
   useEffect(() => {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return undefined;
 
     const ctx = gsap.context(() => {
-      gsap.utils.toArray('.js-reveal').forEach((element) => {
-        gsap.from(element, {
-          y: 36,
-          autoAlpha: 0,
-          duration: 0.9,
-          ease: 'power3.out',
-          scrollTrigger: {
-            trigger: element,
-            start: 'top 84%',
-            once: true,
-          },
-        });
-      });
-
-      gsap.utils.toArray('.js-study').forEach((element) => {
+      gsap.utils.toArray('.js-study', rootRef.current).forEach((element) => {
         const image = element.querySelector('img');
         if (!image) return;
 
@@ -92,7 +99,7 @@ export default function NarrativeSections() {
               end: 'bottom top',
               scrub: 0.7,
             },
-          },
+          }
         );
       });
     }, rootRef);
@@ -102,21 +109,6 @@ export default function NarrativeSections() {
 
   return (
     <main ref={rootRef} className="journey">
-      <section id="about" className="about-scene section-shell" aria-labelledby="about-heading">
-        <div className="aperture aperture--about" aria-hidden="true" />
-        <SectionIntro className="about-copy js-reveal">
-          <p className="section-kicker">Sujal Jaiswal</p>
-          <h1 id="about-heading">I make the invisible feel intentional.</h1>
-          <p>
-            I am a computer science student and frontend developer who turns early product ideas into responsive, considered experiences.
-            Design establishes the signal. Code carries it through.
-          </p>
-        </SectionIntro>
-        <div className="about-note js-reveal">
-          <span className="about-note__line" aria-hidden="true" />
-          <p>Currently building responsive product interfaces at Venturex, while developing systems that make digital work clearer and more useful.</p>
-        </div>
-      </section>
 
       <section id="projects" className="projects-scene section-shell" aria-labelledby="projects-heading">
         <SectionIntro className="projects-heading js-reveal">
