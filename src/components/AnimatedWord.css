@@ -1,0 +1,142 @@
+/* ==========================================================================
+   AnimatedWord.css
+   ========================================================================== */
+
+/* ── DESIGN (Pink) ──────────────────────────────────────────────────────── */
+.animated-word-design {
+  display: inline-block;
+  position: relative;
+  cursor: default;
+  padding: 0.05em 0.2em;
+  margin: 0 -0.2em; /* offset padding so it aligns with normal text */
+  border-radius: 6px;
+  will-change: transform;
+  /* Reduced motion fallback scale */
+  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.animated-word-design.hovered {
+  transform: scale(1.06);
+}
+
+.design-bg {
+  position: absolute;
+  inset: 0;
+  border-radius: 6px;
+  background: hsla(340, 70%, 60%, 0.10);
+  outline: 1px solid var(--warm-border);
+  z-index: 0;
+  transition: all 0.3s ease;
+  overflow: hidden;
+}
+
+.animated-word-design.hovered .design-bg {
+  background: linear-gradient(135deg, hsla(340, 70%, 60%, 0.2), hsla(320, 80%, 55%, 0.2), hsla(340, 70%, 60%, 0.2));
+  background-size: 200% 200%;
+  animation: bg-shift 1.5s ease infinite;
+  box-shadow: 0 0 20px hsla(340, 70%, 60%, 0.3);
+  outline-color: hsla(340, 70%, 60%, 0.5);
+}
+
+@keyframes bg-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.design-text {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  color: var(--warm);
+  perspective: 400px; /* For 3D wobble */
+}
+
+.design-char {
+  display: inline-block;
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+
+/* ── CODE (Blue) ────────────────────────────────────────────────────────── */
+.animated-word-code {
+  display: inline-block;
+  position: relative;
+  cursor: default;
+  padding: 0.05em 0.2em;
+  margin: 0 -0.2em;
+  border-radius: 6px;
+}
+
+.code-bg {
+  position: absolute;
+  inset: 0;
+  border-radius: 6px;
+  background: hsla(195, 80%, 55%, 0.10);
+  outline: 1px solid var(--cool-border);
+  z-index: 0;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.animated-word-code.hovered .code-bg {
+  box-shadow: 0 0 15px hsla(195, 80%, 55%, 0.3);
+  outline-color: hsla(195, 80%, 55%, 0.5);
+}
+
+.code-text {
+  position: relative;
+  z-index: 1;
+  color: var(--cool);
+  font-variant-numeric: tabular-nums;
+  display: inline-flex;
+  align-items: center;
+}
+
+.scanline {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 20%;
+  background: linear-gradient(to bottom, transparent, hsla(195, 80%, 55%, 0.4), transparent);
+  opacity: 0.8;
+  animation: scan 0.8s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes scan {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(500%); }
+}
+
+.terminal-cursor {
+  display: inline-block;
+  width: 0.5em;
+  height: 0.8em;
+  background-color: var(--cool);
+  margin-left: 2px;
+  animation: blink 0.8s step-end infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+/* ── REDUCED MOTION ─────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .animated-word-design,
+  .design-bg,
+  .design-char,
+  .code-bg,
+  .scanline,
+  .terminal-cursor {
+    animation: none !important;
+    transition: none !important;
+    transform: none !important;
+  }
+  .scanline, .terminal-cursor {
+    display: none !important;
+  }
+}

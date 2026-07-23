@@ -112,9 +112,11 @@
   width: 100%;
   height: 100%;
   text-decoration: none;
+  text-decoration: none;
   color: #000000 !important;
+  font-family: 'Clash Display', sans-serif;
   font-size: 13px;
-  font-weight: 400;
+  font-weight: 500;
   letter-spacing: 0.04em;
   user-select: none;
 }
@@ -136,9 +138,10 @@
   gap: 2px;
 }
 .navLink {
+  font-family: 'Clash Display', sans-serif;
   font-size: 13.5px;
-  font-weight: 400;
-  letter-spacing: -0.01em;
+  font-weight: 500;
+  letter-spacing: 0.01em;
   color: #000000 !important;
   padding: 6px 13px;
   border-radius: 100px;
@@ -238,9 +241,10 @@
   height: 100%;
   text-decoration: none;
   color: #000000 !important;
+  font-family: 'Clash Display', sans-serif;
   font-size: 13.5px;
   font-weight: 500;
-  letter-spacing: -0.01em;
+  letter-spacing: 0.01em;
   white-space: nowrap;
 }
 /* ── MOBILE PANEL ────────────────────────────────────────── */
@@ -291,9 +295,11 @@
 /* Stagger-animated mobile links */
 .mobileLink {
   display: block;
+  display: block;
+  font-family: 'Clash Display', sans-serif;
   font-size: 16px;
-  font-weight: 400;
-  letter-spacing: -0.01em;
+  font-weight: 500;
+  letter-spacing: 0.01em;
   color: rgba(10, 10, 10, 0.65);
   padding: 13px 16px;
   border-radius: 11px;
@@ -334,9 +340,10 @@
   background: rgba(255, 255, 255, 0.80);
   border: 1px solid rgba(255, 255, 255, 0.50);
   color: rgba(10, 10, 10, 0.86);
+  font-family: 'Clash Display', sans-serif;
   font-size: 15px;
   font-weight: 500;
-  letter-spacing: -0.01em;
+  letter-spacing: 0.01em;
   text-decoration: none;
 
   opacity: 0;

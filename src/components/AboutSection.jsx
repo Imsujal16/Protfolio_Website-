@@ -1,27 +1,31 @@
 /**
- * AboutSection.jsx — Real content implementation
+ * AboutSection.jsx — v3 (Motion & Polish)
  *
  * Design system:
- *   --warm:  hsl(340, 70%, 60%)  — pink/magenta accent (mirrors "designer." Hero panel)
- *   --cool:  hsl(195, 80%, 55%)  — cyan accent (mirrors "<coder/>" Hero panel)
- *   Background: #ffffff (matches body)
+ *   --warm:  hsl(340, 70%, 60%)
+ *   --cool:  hsl(195, 80%, 55%)
+ *   Background: #ffffff + ambient animated orb layer (CSS)
  *   Font: Inter / DM Sans (body), JetBrains Mono (meta/kicker)
  *
- * Animation system:
- *   All reveals route through the shared useSectionReveal hook.
- *   The headline word-reveal is a bespoke GSAP stagger (no new hook variant needed —
- *   it's just a scoped gsap.from() inside the component's own useEffect, respecting
- *   the same reduced-motion guard and timing family as the hook).
- *
- * Photo slot:
- *   Clearly marked as [SWAPPABLE PHOTO]. Replace the <div class="about-photo-placeholder">
- *   block with <img src={yourPhoto} alt="Sujal Jaiswal" className="about-photo" />.
+ * Animation system (GSAP — already installed):
+ *   1. Word-by-word headline curtain reveal (existing, unchanged)
+ *   2. Sub-line chip reveal (existing, unchanged)
+ *   3. Body paragraphs — fade + rise via useSectionReveal
+ *   4. Photo slot — soft scale + fade entrance on scroll
+ *   5. Location badge — delayed fade + slide-up after photo
+ *   6. Edu items — staggered fade-rise (80ms apart)
+ *   7. Cert cards — staggered fade-rise (100ms apart)
+ *   8. Parallax orb background — CSS var updated on scroll
+ *   9. Visibility toggle — adds .about-section--visible class to
+ *      activate CSS orb animations only when in viewport
  */
 import { useEffect, useRef } from 'react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { useSectionReveal } from '../hooks/useSectionReveal';
 import LiquidHover from './LiquidHover';
+import AnimatedWordDesign from './AnimatedWordDesign';
+import AnimatedWordCode from './AnimatedWordCode';
 import './AboutSection.css';
 
 gsap.registerPlugin(ScrollTrigger);
@@ -51,93 +55,160 @@ const education = [
 ];
 
 const certifications = [
-  { title: 'Coursera Certified',      sub: 'Work with Components in Figma'       },
-  { title: 'VentureX Internship',     sub: 'Tech Intern · Frontend Developer'    },
-  { title: 'DSA Training',            sub: 'CodeHelp Supreme Batch · Jan 2026'   },
-  { title: 'C Programming Training',  sub: 'LNIT · Sep–Dec 2023'                 },
+  { title: 'Coursera Certified',     sub: 'Work with Components in Figma'    },
+  { title: 'VentureX Internship',    sub: 'Tech Intern · Frontend Developer'  },
+  { title: 'DSA Training',           sub: 'CodeHelp Supreme Batch · Jan 2026' },
+  { title: 'C Programming Training', sub: 'LNIT · Sep–Dec 2023'              },
 ];
 
-// Headline words — each wrapped in a highlighted box, revealed staggered on scroll
 const HEADLINE_WORDS = [
   'Building', 'at', 'the', 'intersection', 'of', 'design', '&', 'code',
 ];
 
-// Sub-line chips — same treatment at smaller scale
 const SUBLINE_CHIPS = [
-  "I'm", 'a', 'Computer', 'Science', 'student', 'at', 'BML', 'Munjal', 'University', 'who',
-  'builds', 'digital', 'experiences.'
+  'Hey!', "I'm", 'Sujal', 'Jaiswal', '—', 'a', 'Computer', 'Science', 'student', 'at', 'BML', 'Munjal', 'University', "who's", 'obsessed', 'with', 'building', 'things', 'that', 'actually', 'work,', 'and', 'making', 'them', 'look good', 'while', "they're", 'at', 'it.'
 ];
 
 export default function AboutSection() {
-  const sectionRef = useSectionReveal('.js-about', {
-    variant: 'fade-rise',
-    stagger: 0.10,
-    start: 'top 80%',
+  const sectionRef    = useSectionReveal('.js-about', {
+    variant:  'fade-rise',
+    stagger:  0.10,
+    start:    'top 80%',
     duration: 0.85,
-    ease: 'power3.out',
+    ease:     'power3.out',
   });
 
-  // Bespoke headline word-reveal (scoped useEffect — hooks into same timing family)
   const headlineRef  = useRef(null);
   const sublineRef   = useRef(null);
-
+  const photoRef     = useRef(null);
+  const badgeRef     = useRef(null);
+  const eduItemsRef  = useRef(null);
+  const certCardsRef = useRef(null);
+  const orbsRef      = useRef(null);
 
   useEffect(() => {
+    const section = sectionRef.current;
+    if (!section) return;
+
+    /* ── Parallax + visibility toggle ─────────────────────────── */
+    const handleScroll = () => {
+      const rect = section.getBoundingClientRect();
+      const viewH = window.innerHeight;
+      const inView = rect.top < viewH && rect.bottom > 0;
+
+      // Toggle orb animation (CSS class)
+      section.classList.toggle('about-section--visible', inView);
+
+      // Parallax: move orbs at 30% of scroll speed
+      if (inView && orbsRef.current) {
+        const progress = (viewH - rect.top) / (viewH + rect.height);
+        const offset   = (progress - 0.5) * -60; // -30px → +30px range
+        orbsRef.current.style.setProperty('--about-parallax', `${offset}`);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll(); // run once on mount
+
+    /* ── Reduced-motion: show everything instantly ─────────────── */
     if (REDUCED_MOTION()) {
-      // Make everything visible immediately
-      if (headlineRef.current) {
-        const words = headlineRef.current.querySelectorAll('.about-word-inner');
-        gsap.set(words, { y: 0, opacity: 1 });
-      }
-      if (sublineRef.current) {
-        const chips = sublineRef.current.querySelectorAll('.about-chip-inner');
-        gsap.set(chips, { y: 0, opacity: 1 });
-      }
-      return;
+      const allWords = section.querySelectorAll('.about-word-inner, .about-chip-inner');
+      gsap.set(allWords, { y: 0, opacity: 1 });
+      return () => window.removeEventListener('scroll', handleScroll);
     }
 
     const ctx = gsap.context(() => {
-      // ── Headline: staggered word-by-word curtain reveal ──────────────
+
+      /* 1 ── Headline word-by-word curtain reveal */
       const headlineWords = headlineRef.current?.querySelectorAll('.about-word-inner') ?? [];
       if (headlineWords.length) {
         gsap.set(headlineWords, { y: '108%', opacity: 0 });
         gsap.to(headlineWords, {
-          y: '0%',
-          opacity: 1,
-          duration: 0.75,
-          ease: 'power3.out',
-          stagger: 0.065,
+          y: '0%', opacity: 1,
+          duration: 0.75, ease: 'power3.out', stagger: 0.065,
           scrollTrigger: {
             trigger: headlineRef.current,
-            start: 'top 82%',
-            once: true,
+            start: 'top 82%', once: true,
           },
         });
       }
 
-      // ── Sub-line chips: same reveal, tighter stagger, slight delay ───
+      /* 2 ── Sub-line chip reveal */
       const chips = sublineRef.current?.querySelectorAll('.about-chip-inner') ?? [];
       if (chips.length) {
         gsap.set(chips, { y: '110%', opacity: 0 });
         gsap.to(chips, {
-          y: '0%',
-          opacity: 1,
-          duration: 0.6,
-          ease: 'power3.out',
-          stagger: 0.04,
-          delay: 0.2,
+          y: '0%', opacity: 1,
+          duration: 0.6, ease: 'power3.out', stagger: 0.04, delay: 0.2,
           scrollTrigger: {
             trigger: sublineRef.current,
-            start: 'top 82%',
-            once: true,
+            start: 'top 82%', once: true,
           },
         });
       }
 
+      /* 3 ── Photo slot: scale-up entrance */
+      if (photoRef.current) {
+        gsap.set(photoRef.current, { scale: 0.94, opacity: 0, y: 24 });
+        gsap.to(photoRef.current, {
+          scale: 1, opacity: 1, y: 0,
+          duration: 0.75, ease: 'power3.out',
+          scrollTrigger: {
+            trigger: photoRef.current,
+            start: 'top 85%', once: true,
+          },
+        });
+      }
+
+      /* 4 ── Location badge: slides in after photo */
+      if (badgeRef.current) {
+        gsap.set(badgeRef.current, { opacity: 0, y: 12, scale: 0.88 });
+        gsap.to(badgeRef.current, {
+          opacity: 1, y: 0, scale: 1,
+          duration: 0.5, ease: 'back.out(1.8)', delay: 0.4,
+          scrollTrigger: {
+            trigger: photoRef.current,
+            start: 'top 85%', once: true,
+          },
+        });
+      }
+
+      /* 5 ── Education items: staggered fade-rise (80ms apart) */
+      const eduItems = eduItemsRef.current?.querySelectorAll('.about-edu__item') ?? [];
+      if (eduItems.length) {
+        gsap.set(eduItems, { opacity: 0, y: 20 });
+        gsap.to(eduItems, {
+          opacity: 1, y: 0,
+          duration: 0.6, ease: 'power2.out',
+          stagger: 0.08,
+          scrollTrigger: {
+            trigger: eduItemsRef.current,
+            start: 'top 82%', once: true,
+          },
+        });
+      }
+
+      /* 6 ── Cert cards: staggered fade-rise (100ms apart) */
+      const certCards = certCardsRef.current?.querySelectorAll('.about-cert-card') ?? [];
+      if (certCards.length) {
+        gsap.set(certCards, { opacity: 0, y: 24 });
+        gsap.to(certCards, {
+          opacity: 1, y: 0,
+          duration: 0.55, ease: 'power2.out',
+          stagger: 0.10,
+          scrollTrigger: {
+            trigger: certCardsRef.current,
+            start: 'top 85%', once: true,
+          },
+        });
+      }
 
     });
 
-    return () => ctx.revert();
+    return () => {
+      ctx.revert();
+      window.removeEventListener('scroll', handleScroll);
+    };
   }, []);
 
   return (
@@ -147,9 +218,15 @@ export default function AboutSection() {
       className="about-section"
       aria-labelledby="about-heading"
     >
-      {/* ══ BLOCK 1 — Headline ════════════════════════════════════════════ */}
+      {/* ── Ambient orb background ────────────────────────────── */}
+      <div ref={orbsRef} className="about-bg-orbs" aria-hidden="true">
+        <div className="about-orb about-orb--warm" />
+        <div className="about-orb about-orb--cool" />
+        <div className="about-orb about-orb--mid"  />
+      </div>
+
+      {/* ══ BLOCK 1 — Headline ════════════════════════════════════ */}
       <div className="about-headline-block">
-        {/* Word-by-word highlighted headline */}
         <h2
           id="about-heading"
           ref={headlineRef}
@@ -158,36 +235,38 @@ export default function AboutSection() {
         >
           {HEADLINE_WORDS.map((word, i) => (
             <span key={i} className="about-word-curtain">
-              <span
-                className={`about-word-inner ${
-                  word === 'design' ? 'word--warm' :
-                  word === 'code'   ? 'word--cool' : ''
-                }`}
-              >
-                {word}
+              <span className="about-word-inner">
+                {word === 'design' ? (
+                  <AnimatedWordDesign word="design" />
+                ) : word === 'code' ? (
+                  <AnimatedWordCode word="code" />
+                ) : (
+                  word
+                )}
               </span>
             </span>
           ))}
         </h2>
 
-        {/* Sub-line chips + "builds" emphasis */}
         <p
           ref={sublineRef}
           className="about-subline"
-          aria-label="I'm a Computer Science student at BML Munjal University who builds digital experiences."
+          aria-label="Hey! I'm Sujal Jaiswal — a Computer Science student at BML Munjal University who's obsessed with building things that actually work, and making them look good while they're at it."
         >
-          {SUBLINE_CHIPS.map((chip, i) => (
-            <span key={i} className={`about-chip-curtain ${chip === 'builds' ? 'about-chip-curtain--builds' : ''}`}>
-              <span className={`about-chip-inner ${chip === 'builds' ? 'about-chip-inner--builds' : ''}`}>
-                {chip}
+          {SUBLINE_CHIPS.map((chip, i) => {
+            const isHighlight = chip === 'obsessed' || chip === 'look good';
+            return (
+              <span key={i} className={`about-chip-curtain ${isHighlight ? 'about-chip-curtain--highlight' : ''}`}>
+                <span className={`about-chip-inner ${isHighlight ? 'about-chip-inner--highlight' : ''}`}>
+                  {chip}
+                </span>
               </span>
-            </span>
-          ))}
+            );
+          })}
         </p>
-
       </div>
 
-      {/* ══ BLOCK 2 — Body copy ══════════════════════════════════════════ */}
+      {/* ══ BLOCK 2 — Body copy ═══════════════════════════════════ */}
       <div className="about-body-block js-about">
         <p className="about-body-para">
           My world lives at the intersection of{' '}
@@ -205,29 +284,25 @@ export default function AboutSection() {
         </p>
       </div>
 
-
-
-      {/* ══ BLOCK 4 — Education + Certifications (Two-Column Balanced) ═══ */}
+      {/* ══ BLOCK 3 — Education + Certifications ═════════════════ */}
       <div className="about-lower-grid">
 
-        {/* ── LEFT: Photo Column ────────────────────────────────────── */}
-        <div className="about-photo-col js-about">
-
-          {/* SWAPPABLE PHOTO SLOT */}
+        {/* ── LEFT: Photo ───────────────────────────────────────── */}
+        <div className="about-photo-col">
           <div
+            ref={photoRef}
             className="about-photo-slot"
             role="img"
             aria-label="Photo of Sujal Jaiswal"
             style={{ border: 'none', background: 'transparent' }}
           >
-            {/* Liquid Distortion Image Container */}
-            <div 
-              style={{ 
-                width: '100%', 
-                height: '100%', 
-                borderRadius: '16px', 
+            <div
+              style={{
+                width: '100%',
+                height: '100%',
+                borderRadius: '16px',
                 overflow: 'hidden',
-                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.05)'
+                boxShadow: '0 12px 40px rgba(0, 0, 0, 0.08)',
               }}
             >
               <LiquidHover
@@ -237,27 +312,26 @@ export default function AboutSection() {
                 resolution={10}
               />
             </div>
-            
-            {/* Location badge overlapping photo */}
-            <div className="about-location-badge">
+
+            {/* Location badge */}
+            <div ref={badgeRef} className="about-location-badge">
               <span className="about-location-badge__icon" aria-hidden="true">📍</span>
               Gurugram, India
             </div>
           </div>
         </div>
 
-        {/* ── RIGHT: Text Column (Education & Certs) ────────────────── */}
+        {/* ── RIGHT: Education & Certs ──────────────────────────── */}
         <div className="about-text-col">
-          
+
           {/* Education timeline */}
-          <div className="about-edu js-about" aria-label="Education">
+          <div ref={eduItemsRef} className="about-edu" aria-label="Education">
             <p className="about-edu__kicker">EDUCATION</p>
             <ol className="about-edu__list">
               {education.map((entry, i) => (
                 <li
                   key={i}
-                  className="about-edu__item js-about"
-                  style={{ '--edu-delay': `${i * 0.09}s` }}
+                  className="about-edu__item"
                 >
                   <h3 className="about-edu__institution">{entry.institution}</h3>
                   <p className="about-edu__degree">{entry.degree}</p>
@@ -267,10 +341,10 @@ export default function AboutSection() {
             </ol>
           </div>
 
-          {/* Certifications 2×2 grid */}
-          <div className="about-cert-section js-about" aria-label="Certifications">
+          {/* Certifications grid */}
+          <div className="about-cert-section" aria-label="Certifications">
             <p className="about-edu__kicker">CERTIFICATIONS</p>
-            <div className="about-cert-grid">
+            <div ref={certCardsRef} className="about-cert-grid">
               {certifications.map((cert) => (
                 <article
                   key={cert.title}
