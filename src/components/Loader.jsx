@@ -15,27 +15,49 @@
  *   3200ms → done, onComplete() fires
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useLayoutEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
+import { getLenis } from "../hooks/useLenis"; // Import getLenis to pause/reset it
 
 export default function Loader({ onComplete }) {
   const [phase, setPhase] = useState("loading");
 
-  useEffect(() => {
-    // Lock scroll during loader presentation
+  // THE FIX: useLayoutEffect runs synchronously BEFORE the browser paints
+  useLayoutEffect(() => {
+    // 1. Disable browser's native scroll memory
+    if ('scrollRestoration' in window.history) {
+      window.history.scrollRestoration = 'manual';
+    }
+    
+    // 2. Instantly snap to the top of the page
+    window.scrollTo(0, 0);
+    
+    // Optional: Stop/reset Lenis smooth scrolling immediately
+    const lenis = getLenis();
+    if (lenis) {
+      lenis.scrollTo(0, { immediate: true });
+      lenis.stop();
+    }
+
+    // 3. Lock body scrolling while the loader is active
     const originalOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
-    window.scrollTo(0, 0);
 
+    // 4. Unlock scrolling when the component unmounts
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      if (getLenis()) getLenis().start();
+    };
+  }, []);
+
+  useEffect(() => {
     const timer1 = setTimeout(() => setPhase("expanding"), 2000);
     const timer2 = setTimeout(() => {
-      document.body.style.overflow = originalOverflow;
       setPhase("done");
       if (onComplete) onComplete();
     }, 3200);
 
     return () => {
-      document.body.style.overflow = originalOverflow;
       clearTimeout(timer1);
       clearTimeout(timer2);
     };
