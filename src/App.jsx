@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect } from 'react';
-import { useLenis } from './hooks/useLenis';
+import { useLenis, getLenis } from './hooks/useLenis';
 import Navbar from './components/Navbar';
 import MaskReveal from './components/MaskReveal';
 import { DesignerPanel, CoderPanel } from './components/HeroPanels';
@@ -10,16 +10,34 @@ import Loader from './components/Loader';
 export default function App() {
   const [loaderDone, setLoaderDone] = useState(false);
 
-  // Global mount effect: reset scroll to top and redirect to home (/) on hard refresh
   useEffect(() => {
+    // 1. Force manual scroll restoration globally
     if ('scrollRestoration' in window.history) {
       window.history.scrollRestoration = 'manual';
     }
+
+    // 2. Nuke scroll natively on mount
     window.scrollTo(0, 0);
 
-    if (window.location.pathname !== '/' || window.location.hash !== '') {
-      window.history.replaceState(null, '', '/');
+    // 3. Clear hash from URL if it exists (prevents snapping to sections)
+    if (window.location.hash) {
+      window.history.replaceState(null, '', window.location.pathname);
     }
+
+    // 4. Reset Lenis immediately if it's already running
+    const lenis = getLenis();
+    if (lenis) lenis.scrollTo(0, { immediate: true });
+
+    // 5. The absolute fail-safe: push scroll to top right before user refreshes
+    const handleBeforeUnload = () => {
+      window.scrollTo(0, 0);
+    };
+    
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
   }, []);
 
   // Initialize Lenis smooth scroll + GSAP ticker integration at the app root
