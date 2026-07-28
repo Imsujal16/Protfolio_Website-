@@ -1,12 +1,14 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { useLenis } from './hooks/useLenis';
 import Navbar from './components/Navbar';
 import MaskReveal from './components/MaskReveal';
 import { DesignerPanel, CoderPanel } from './components/HeroPanels';
 import HeroTransition from './components/HeroTransition';
 import AboutSection from './components/AboutSection';
+import Loader from './components/Loader';
 
 export default function App() {
+  const [loaderDone, setLoaderDone] = useState(false);
   // Initialize Lenis smooth scroll + GSAP ticker integration at the app root
   useLenis();
 
@@ -16,6 +18,8 @@ export default function App() {
 
   return (
     <>
+      {/* Loader — full-screen intro, slides up then unmounts via AnimatePresence */}
+      {!loaderDone && <Loader onComplete={() => setLoaderDone(true)} />}
       {/* Navbar: fixed, always above everything via z-index in its own CSS */}
       <Navbar />
 
