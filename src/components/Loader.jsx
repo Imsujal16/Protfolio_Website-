@@ -1,85 +1,114 @@
 /**
- * Loader.jsx — Lando Norris-style full-screen intro sequence.
+ * Loader.jsx — SVG Hole-Punch mask reveal (Awwwards / Lando Norris style).
  *
- * Visual sequence:
- *   0ms     → full-screen #f5f5f5 cover mounts, SJ flips continuously (3D rotateY)
- *   ~2500ms → isLoading = false, AnimatePresence triggers exit
- *   exit    → panel slides up y: "-100%" over 800ms, cubic-bezier(0.76, 0, 0.24, 1)
- *   done    → AnimatePresence calls onExitComplete → onComplete() fires in App
+ * Phases:
+ *   "loading"   → #f5f5f5 panel, "SJ" punches a transparent hole that 3D-flips
+ *   "expanding" → hole scales to 250× revealing the hero underneath
+ *   "done"      → component removed from DOM, onComplete() fires
  *
- * Imports from "motion/react" — Framer Motion v12 package name in this project.
+ * Two key adaptations from the reference code:
+ *   1. Import from "motion/react" — this project uses Framer Motion v12
+ *   2. Tailwind class names → inline styles (project uses vanilla CSS)
+ *   3. SVG text font attributes added explicitly (classes don't apply inside <svg>)
  */
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 
 export default function Loader({ onComplete }) {
-  const [isLoading, setIsLoading] = useState(true);
+  const [phase, setPhase] = useState("loading"); // "loading" | "expanding" | "done"
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 2500);
+    // Phase 1: 3D flip for 2 seconds
+    const timer1 = setTimeout(() => {
+      setPhase("expanding");
+    }, 2000);
 
-    return () => clearTimeout(timer);
-  }, []);
+    // Phase 2: massive scale zoom-through → done
+    const timer2 = setTimeout(() => {
+      setPhase("done");
+      if (onComplete) onComplete();
+    }, 3500);
+
+    return () => {
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+    };
+  }, [onComplete]);
 
   return (
-    <AnimatePresence onExitComplete={onComplete}>
-      {isLoading && (
+    <AnimatePresence>
+      {phase !== "done" && (
         <motion.div
-          key="loader"
-          exit={{
-            y: "-100%",
-            transition: { duration: 0.8, ease: [0.76, 0, 0.24, 1] },
-          }}
+          exit={{ opacity: 0, transition: { duration: 0.3 } }}
           style={{
             position:       'fixed',
             inset:          0,
             zIndex:         9999,
             display:        'flex',
-            flexDirection:  'column',
             alignItems:     'center',
             justifyContent: 'center',
-            backgroundColor:'#f5f5f5',
-            color:          '#000',
-            overflow:       'hidden',
+            background:     'transparent',
+            pointerEvents:  'none',
           }}
         >
-          {/* ── Center "SJ" with continuous 3D flip ── */}
-          <motion.div
-            animate={{ rotateY: [0, 180, 360] }}
-            transition={{
-              duration: 1.5,
-              repeat:   Infinity,
-              ease:     "easeInOut",
-            }}
+          {/* ── SVG handles masking + zoom reveal ─────────────────── */}
+          <svg
             style={{
-              transformStyle: 'preserve-3d',
-              display:        'flex',
-              alignItems:     'center',
-              justifyContent: 'center',
+              position: 'absolute',
+              inset:    0,
+              width:    '100%',
+              height:   '100%',
             }}
           >
-            <h1
-              style={{
-                fontFamily:    "'Clash Display', 'Inter', sans-serif",
-                fontSize:      'clamp(4rem, 12vw, 7rem)',
-                fontWeight:    900,
-                fontStyle:     'italic',
-                letterSpacing: '-0.04em',
-                lineHeight:    1,
-                color:         '#000',
-                mixBlendMode:  'difference',
-                userSelect:    'none',
-              }}
-            >
-              SJ
-            </h1>
-          </motion.div>
+            <defs>
+              <mask id="sj-mask">
+                {/* White = solid background area */}
+                <rect width="100%" height="100%" fill="white" />
 
-          {/* ── Bottom "INITIALIZING SUJAL" pulsing text ── */}
-          <div
+                {/* Black = transparent hole shaped like "SJ" — we animate this */}
+                <motion.text
+                  x="50%"
+                  y="50%"
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                  fill="black"
+                  style={{
+                    fontSize:        '8rem',
+                    fontFamily:      "'Clash Display', 'Inter', sans-serif",
+                    fontWeight:      900,
+                    fontStyle:       'italic',
+                    letterSpacing:   '-0.04em',
+                    transformOrigin: 'center center',
+                  }}
+                  initial={{ rotateY: 0, scale: 1 }}
+                  animate={
+                    phase === "loading"
+                      ? { rotateY: [0, 180, 360] }          // 3D flip while loading
+                      : { rotateY: 0, scale: 250 }           // zoom through on expand
+                  }
+                  transition={
+                    phase === "loading"
+                      ? { duration: 1.5, repeat: Infinity, ease: "easeInOut" }
+                      : { duration: 1.2, ease: [0.76, 0, 0.24, 1] }
+                  }
+                >
+                  SJ
+                </motion.text>
+              </mask>
+            </defs>
+
+            {/* The actual solid loading background — masked by the SJ hole */}
+            <rect
+              width="100%"
+              height="100%"
+              fill="#f5f5f5"
+              mask="url(#sj-mask)"
+            />
+          </svg>
+
+          {/* ── Bottom label — fades out when expansion starts ─────── */}
+          <motion.div
             style={{
               position:  'absolute',
               bottom:    '2.5rem',
@@ -87,6 +116,8 @@ export default function Loader({ onComplete }) {
               transform: 'translateX(-50%)',
               whiteSpace:'nowrap',
             }}
+            animate={{ opacity: phase === "loading" ? 1 : 0 }}
+            transition={{ duration: 0.3 }}
           >
             <motion.p
               animate={{ opacity: [0.5, 1, 0.5] }}
@@ -102,7 +133,7 @@ export default function Loader({ onComplete }) {
             >
               Initializing Sujal
             </motion.p>
-          </div>
+          </motion.div>
         </motion.div>
       )}
     </AnimatePresence>
