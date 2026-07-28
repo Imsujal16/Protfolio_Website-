@@ -19,11 +19,19 @@ import { useState, useEffect, useLayoutEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { getLenis } from "../hooks/useLenis"; // Import getLenis to pause/reset it
 
+// THE FIX: This variable lives outside React. 
+// It survives re-renders but resets on a hard browser refresh (F5).
+let hasLoaderRun = false;
+
 export default function Loader({ onComplete }) {
-  const [phase, setPhase] = useState("loading");
+  // If it already ran this session, instantly set state to "done"
+  const [phase, setPhase] = useState(hasLoaderRun ? "done" : "loading");
 
   // THE FIX: useLayoutEffect runs synchronously BEFORE the browser paints
   useLayoutEffect(() => {
+    // Skip all scroll locking if the loader is already dead
+    if (hasLoaderRun) return;
+
     // 1. Disable browser's native scroll memory
     if ('scrollRestoration' in window.history) {
       window.history.scrollRestoration = 'manual';
@@ -51,8 +59,15 @@ export default function Loader({ onComplete }) {
   }, []);
 
   useEffect(() => {
+    // If a scroll event forces a re-render, instantly unlock the app and abort
+    if (hasLoaderRun) {
+      if (onComplete) onComplete();
+      return;
+    }
+
     const timer1 = setTimeout(() => setPhase("expanding"), 2000);
     const timer2 = setTimeout(() => {
+      hasLoaderRun = true; // Mark as permanently complete
       setPhase("done");
       if (onComplete) onComplete();
     }, 3200);
@@ -62,6 +77,9 @@ export default function Loader({ onComplete }) {
       clearTimeout(timer2);
     };
   }, [onComplete]);
+
+  // THE KILL SWITCH: Prevents Framer Motion from trying to animate an exit or rewind
+  if (hasLoaderRun && phase === "done") return null;
 
   return (
     <AnimatePresence>
