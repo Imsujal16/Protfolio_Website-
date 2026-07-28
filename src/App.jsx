@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { useLenis } from './hooks/useLenis';
 import Navbar from './components/Navbar';
 import MaskReveal from './components/MaskReveal';
@@ -9,6 +9,19 @@ import Loader from './components/Loader';
 
 export default function App() {
   const [loaderDone, setLoaderDone] = useState(false);
+
+  // Global mount effect: reset scroll to top and redirect to home (/) on hard refresh
+  useEffect(() => {
+    if ('scrollRestoration' in window.history) {
+      window.history.scrollRestoration = 'manual';
+    }
+    window.scrollTo(0, 0);
+
+    if (window.location.pathname !== '/' || window.location.hash !== '') {
+      window.history.replaceState(null, '', '/');
+    }
+  }, []);
+
   // Initialize Lenis smooth scroll + GSAP ticker integration at the app root
   useLenis();
 
