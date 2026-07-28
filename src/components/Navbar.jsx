@@ -17,6 +17,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useScrolled } from '../hooks/useScrolled';
+import { getLenis } from '../hooks/useLenis';
 import { GlowingBorderButton } from './GlowingBorderButton';
 import styles from './Navbar.module.css';
 
@@ -87,6 +88,18 @@ export default function Navbar() {
 
   const closeMenu = useCallback(() => setOpen(false), []);
 
+  const handleNavClick = useCallback((e, href) => {
+    e.preventDefault();
+    closeMenu();
+    const target = document.querySelector(href);
+    const lenis = getLenis();
+    if (lenis && target) {
+      lenis.scrollTo(target);
+    } else if (target) {
+      target.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [closeMenu]);
+
   const wrapperClass = [
     styles.navbar,
     scrolled ? styles.scrolled : '',
@@ -109,6 +122,12 @@ export default function Navbar() {
             href="/"
             aria-label="SJ — home"
             className={styles.logoLink}
+            onClick={(e) => {
+              e.preventDefault();
+              const lenis = getLenis();
+              if (lenis) lenis.scrollTo(0);
+              else window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
           >
             SJ
           </a>
@@ -127,7 +146,12 @@ export default function Navbar() {
         >
           <nav aria-label="Site sections" className={styles.navLinksContainer}>
             {NAV_LINKS.map(({ label, href }) => (
-              <a key={label} href={href} className={styles.navLink}>
+              <a
+                key={label}
+                href={href}
+                className={styles.navLink}
+                onClick={(e) => handleNavClick(e, href)}
+              >
                 {label}
               </a>
             ))}
@@ -186,7 +210,7 @@ export default function Navbar() {
               key={label}
               href={href}
               className={styles.mobileLink}
-              onClick={closeMenu}
+              onClick={(e) => handleNavClick(e, href)}
               style={{ '--i': i }}
             >
               {label}

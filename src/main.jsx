@@ -8,10 +8,15 @@ if (typeof window !== 'undefined') {
   if ('scrollRestoration' in window.history) {
     window.history.scrollRestoration = 'manual';
   }
-  window.scrollTo(0, 0);
-  if (window.location.pathname !== '/' || window.location.hash !== '') {
+  if (window.location.hash || window.location.pathname !== '/') {
     window.history.replaceState(null, '', '/');
   }
+  window.scrollTo(0, 0);
+
+  // Before unload: reset scroll position so Chrome/browser saves 0 as restored position
+  window.addEventListener('beforeunload', () => {
+    window.scrollTo(0, 0);
+  });
 }
 
 createRoot(document.getElementById('root')).render(
