@@ -1,34 +1,32 @@
 /**
- * Loader.jsx — SVG Hole-Punch mask reveal (Awwwards / Lando Norris style).
+ * Loader.jsx — SVG Hole-Punch mask reveal, dissolve fix.
  *
- * Phases:
- *   "loading"   → #f5f5f5 panel, "SJ" punches a transparent hole that 3D-flips
- *   "expanding" → hole scales to 250× revealing the hero underneath
- *   "done"      → component removed from DOM, onComplete() fires
+ * Fix vs previous version:
+ *   1. scale 250 → 1500  (pushes hole way past viewport corners)
+ *   2. Parent opacity: 1 → 0 with delay: 0.7, duration: 0.5
+ *      (melts letter-edge artifacts before unmount timer fires)
  *
- * Two key adaptations from the reference code:
- *   1. Import from "motion/react" — this project uses Framer Motion v12
- *   2. Tailwind class names → inline styles (project uses vanilla CSS)
- *   3. SVG text font attributes added explicitly (classes don't apply inside <svg>)
+ * Timeline:
+ *   0ms    → loading phase, SJ 3D-flips
+ *   2000ms → expanding phase:
+ *              • SJ scale 1→1500 over 1.2s, cubic-bezier(0.76,0,0.24,1)
+ *              • label fades out 0.3s
+ *              • container fades out 0.5s (delay 0.7s → starts at 2700ms)
+ *   3200ms → done, onComplete() fires
  */
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 
 export default function Loader({ onComplete }) {
-  const [phase, setPhase] = useState("loading"); // "loading" | "expanding" | "done"
+  const [phase, setPhase] = useState("loading");
 
   useEffect(() => {
-    // Phase 1: 3D flip for 2 seconds
-    const timer1 = setTimeout(() => {
-      setPhase("expanding");
-    }, 2000);
-
-    // Phase 2: massive scale zoom-through → done
+    const timer1 = setTimeout(() => setPhase("expanding"), 2000);
     const timer2 = setTimeout(() => {
       setPhase("done");
       if (onComplete) onComplete();
-    }, 3500);
+    }, 3200);
 
     return () => {
       clearTimeout(timer1);
@@ -40,7 +38,6 @@ export default function Loader({ onComplete }) {
     <AnimatePresence>
       {phase !== "done" && (
         <motion.div
-          exit={{ opacity: 0, transition: { duration: 0.3 } }}
           style={{
             position:       'fixed',
             inset:          0,
@@ -51,22 +48,18 @@ export default function Loader({ onComplete }) {
             background:     'transparent',
             pointerEvents:  'none',
           }}
+          /* THE FIX: fade the whole overlay out right at the end of the zoom */
+          initial={{ opacity: 1 }}
+          animate={{ opacity: phase === "expanding" ? 0 : 1 }}
+          transition={{ delay: 0.7, duration: 0.5, ease: "easeInOut" }}
         >
-          {/* ── SVG handles masking + zoom reveal ─────────────────── */}
-          <svg
-            style={{
-              position: 'absolute',
-              inset:    0,
-              width:    '100%',
-              height:   '100%',
-            }}
-          >
+          {/* ── SVG mask ─────────────────────────────────────────── */}
+          <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}>
             <defs>
               <mask id="sj-mask">
-                {/* White = solid background area */}
                 <rect width="100%" height="100%" fill="white" />
 
-                {/* Black = transparent hole shaped like "SJ" — we animate this */}
+                {/* Black = transparent hole. Scale this to swallow the panel. */}
                 <motion.text
                   x="50%"
                   y="50%"
@@ -84,8 +77,8 @@ export default function Loader({ onComplete }) {
                   initial={{ rotateY: 0, scale: 1 }}
                   animate={
                     phase === "loading"
-                      ? { rotateY: [0, 180, 360] }          // 3D flip while loading
-                      : { rotateY: 0, scale: 250 }           // zoom through on expand
+                      ? { rotateY: [0, 180, 360] }
+                      : { rotateY: 0, scale: 1500 }   /* THE FIX: 1500× */
                   }
                   transition={
                     phase === "loading"
@@ -98,16 +91,10 @@ export default function Loader({ onComplete }) {
               </mask>
             </defs>
 
-            {/* The actual solid loading background — masked by the SJ hole */}
-            <rect
-              width="100%"
-              height="100%"
-              fill="#f5f5f5"
-              mask="url(#sj-mask)"
-            />
+            <rect width="100%" height="100%" fill="#f5f5f5" mask="url(#sj-mask)" />
           </svg>
 
-          {/* ── Bottom label — fades out when expansion starts ─────── */}
+          {/* ── Bottom label ──────────────────────────────────────── */}
           <motion.div
             style={{
               position:  'absolute',
