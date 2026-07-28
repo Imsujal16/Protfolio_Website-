@@ -18,6 +18,14 @@ export default function App() {
     window.scrollTo(0, 0);
   }, []);
 
+  // 1.5. Remove native pre-loader after React successfully mounts and paints
+  useEffect(() => {
+    const preloader = document.getElementById('native-preloader');
+    if (preloader) {
+      preloader.remove();
+    }
+  }, []);
+
   // 2. Backup reset exactly when the lock is lifted
   useEffect(() => {
     if (isAppReady) {
@@ -43,7 +51,7 @@ export default function App() {
       {/* THE GOD LEVEL FIX: 
           Physically pins the site to the top of the screen until the loader is completely done. 
           The browser literally cannot show a scrolled section through the mask. */}
-      <div className={!isAppReady ? "fixed inset-0 w-full h-screen overflow-hidden" : ""}>
+      <div style={!isAppReady ? { position: 'fixed', inset: 0, width: '100%', height: '100vh', overflow: 'hidden' } : {}}>
         <main>
           {/* Navbar: fixed, always above everything via z-index in its own CSS */}
           <Navbar />
