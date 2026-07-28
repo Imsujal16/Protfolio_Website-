@@ -41,6 +41,9 @@ export function useLenis() {
 
     lenisInstance = lenis;
 
+    // Reset scroll to top on initialization
+    lenis.scrollTo(0, { immediate: true });
+
     // Connect Lenis scroll events → GSAP ScrollTrigger
     lenis.on('scroll', ScrollTrigger.update);
 

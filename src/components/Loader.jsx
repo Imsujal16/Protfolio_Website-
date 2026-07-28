@@ -22,13 +22,20 @@ export default function Loader({ onComplete }) {
   const [phase, setPhase] = useState("loading");
 
   useEffect(() => {
+    // Lock scroll during loader presentation
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    window.scrollTo(0, 0);
+
     const timer1 = setTimeout(() => setPhase("expanding"), 2000);
     const timer2 = setTimeout(() => {
+      document.body.style.overflow = originalOverflow;
       setPhase("done");
       if (onComplete) onComplete();
     }, 3200);
 
     return () => {
+      document.body.style.overflow = originalOverflow;
       clearTimeout(timer1);
       clearTimeout(timer2);
     };
